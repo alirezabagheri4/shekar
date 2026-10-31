@@ -27,6 +27,9 @@ public static class DependencyInjection
     public static IServiceCollection AddPipelineServices(this IServiceCollection services)
     {
         services.AddScoped<IListingIngestionService, ListingIngestionService>();
+        services.AddSingleton<IVehicleModelMatcher, VehicleModelMatcher>();
+        services.AddScoped<IVehicleNormalizationService, VehicleNormalizationService>();
+        services.AddScoped<IMarketAggregationService, MarketAggregationService>();
         return services;
     }
 }

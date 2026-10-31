@@ -19,6 +19,16 @@ public sealed class MockCarListingRepository : ICarListingRepository
         Task.FromResult<IReadOnlyList<CarListing>>(
             _store.CarListings.Where(l => l.Source == source && l.State == ListingState.Active).ToList());
 
+    public Task<IReadOnlyList<CarListing>> ListUnmatchedAsync(int max, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CarListing>>(_store.CarListings
+            .Where(l => l.State == ListingState.Active && l.VehicleModelId == null)
+            .OrderBy(l => l.Id).Take(max).ToList());
+
+    public Task<IReadOnlyList<CarListing>> ListMatchedActiveSinceAsync(DateTimeOffset sinceUtc, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CarListing>>(_store.CarListings
+            .Where(l => l.State == ListingState.Active && l.VehicleModelId != null && l.PublishedAt >= sinceUtc)
+            .ToList());
+
     public Task<CarListing> AddAsync(CarListing listing, CancellationToken ct = default)
     {
         lock (_store.Gate)
@@ -30,6 +40,45 @@ public sealed class MockCarListingRepository : ICarListingRepository
     }
 
     public Task UpdateAsync(CarListing listing, CancellationToken ct = default) => Task.CompletedTask;
+}
+
+public sealed class MockVehicleModelRepository : IVehicleModelRepository
+{
+    private readonly MockDataStore _store;
+    public MockVehicleModelRepository(MockDataStore store) => _store = store;
+
+    public Task<VehicleModel?> GetAsync(int id, CancellationToken ct = default) =>
+        Task.FromResult(_store.VehicleModels.FirstOrDefault(m => m.Id == id));
+
+    public Task<IReadOnlyList<VehicleModel>> ListActiveAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<VehicleModel>>(_store.VehicleModels.Where(m => m.IsActive).ToList());
+}
+
+public sealed class MockMarketSegmentStatRepository : IMarketSegmentStatRepository
+{
+    private readonly MockDataStore _store;
+    public MockMarketSegmentStatRepository(MockDataStore store) => _store = store;
+
+    public Task<MarketSegmentStat?> GetBySegmentKeyAsync(string segmentKey, CancellationToken ct = default) =>
+        Task.FromResult(_store.MarketSegmentStats.FirstOrDefault(s => s.SegmentKey == segmentKey));
+
+    public Task<IReadOnlyList<MarketSegmentStat>> ListAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<MarketSegmentStat>>(_store.MarketSegmentStats.ToList());
+
+    public Task UpsertAsync(MarketSegmentStat stat, CancellationToken ct = default)
+    {
+        lock (_store.Gate)
+        {
+            MarketSegmentStat? existing = _store.MarketSegmentStats.FirstOrDefault(s => s.SegmentKey == stat.SegmentKey);
+            if (existing is null)
+            {
+                stat.Id = _store.MarketSegmentStats.Select(s => s.Id).DefaultIfEmpty(0).Max() + 1;
+                _store.MarketSegmentStats.Add(stat);
+            }
+            // در صورت وجود، stat همان نمونه‌ی مرجع است و به‌روز شده.
+        }
+        return Task.CompletedTask;
+    }
 }
 
 public sealed class MockCrawlRunRepository : ICrawlRunRepository

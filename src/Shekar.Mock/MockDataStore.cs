@@ -28,6 +28,8 @@ public sealed class MockDataStore
     public List<BlockedAdvertiser> BlockedAdvertisers { get; } = new();
     public List<CarListing> CarListings { get; } = new();
     public List<CrawlRun> CrawlRuns { get; } = new();
+    public List<VehicleModel> VehicleModels { get; } = new();
+    public List<MarketSegmentStat> MarketSegmentStats { get; } = new();
 
     /// <summary>شناسه‌ی کاربر نمونه‌ی لاگین‌شده (کامران رضایی، مشترک حرفه‌ای).</summary>
     public const int DemoUserId = 1;
@@ -112,6 +114,7 @@ public sealed class MockDataStore
         SeedBells(now);
         SeedAppraisals(now);
         SeedModeration(now);
+        SeedVehicleModels();
 
         // هر شکار یک شماره‌ی آگهی‌دهنده دارد تا فیلتر شماره‌های بلاک‌شده قابل‌استفاده باشد.
         foreach (Hunt h in Hunts)
@@ -167,6 +170,34 @@ public sealed class MockDataStore
         Set("SupportStartHour", "9", "int", "R12 — ساعت شروع پشتیبانی (Asia/Tehran)");
         Set("SupportEndHour", "18", "int", "R12 — ساعت پایان پشتیبانی (Asia/Tehran)");
         Set("MaxAdsPerMonthBeforeReview", "20", "int", "آستانه‌ی تعداد آگهی ماهانه برای بررسی دلال/اسپم");
+    }
+
+    private void SeedVehicleModels()
+    {
+        int id = 1;
+        void Add(string brand, string model, string? trim, string? body, int liq, string[] aliases, bool colorSensitive = false) =>
+            VehicleModels.Add(new VehicleModel
+            {
+                Id = id++, Brand = brand, Model = model, Trim = trim, BodyType = body,
+                LiquidityScore = liq, Aliases = aliases, ColorSensitive = colorSensitive, IsActive = true
+            });
+
+        Add("پژو", "۲۰۷", "دستی", "هاچ‌بک", 90, new[] { "207", "پژو 207", "peugeot 207" });
+        Add("پژو", "۲۰۶", "تیپ ۵", "هاچ‌بک", 85, new[] { "206", "پژو 206" });
+        Add("پژو", "پارس", null, "سدان", 80, new[] { "pars", "پژو پارس" });
+        Add("سایپا", "پراید", "۱۱۱", "هاچ‌بک", 88, new[] { "pride", "پراید 111" });
+        Add("سایپا", "تیبا", null, "سدان", 78, new[] { "tiba", "تیبا" });
+        Add("سایپا", "کوییک", "اتوماتیک", "هاچ‌بک", 82, new[] { "quick", "کوییک کراس" });
+        Add("ایران‌خودرو", "دنا", "پلاس توربو", "سدان", 84, new[] { "dena", "دنا پلاس" });
+        Add("ایران‌خودرو", "تارا", "اتوماتیک", "سدان", 80, new[] { "tara", "تارا" });
+        Add("ایران‌خودرو", "سمند", "سورن پلاس", "سدان", 76, new[] { "samand", "سمند سورن" });
+        Add("ام‌وی‌ام", "X55", "پرو", "شاسی‌بلند", 70, new[] { "mvm x55", "ام وی ام ایکس55" });
+        Add("چانگان", "یونی‌وی", null, "شاسی‌بلند", 68, new[] { "changan", "univ", "یونی وی" });
+        Add("کیا", "سراتو", "۲۰۰۰", "سدان", 66, new[] { "cerato", "کیا سراتو" });
+        Add("هیوندای", "سوناتا", "LF", "سدان", 58, new[] { "sonata", "سوناتا" });
+        Add("بی‌ام‌و", "۷۳۰Li", "ام‌پکیج", "سدان", 45, new[] { "bmw 730", "730li" }, colorSensitive: true);
+        Add("بنز", "E250", null, "سدان", 42, new[] { "benz e250", "e250" }, colorSensitive: true);
+        Add("تویوتا", "لندکروزر", "پرادو", "شاسی‌بلند", 55, new[] { "prado", "لندکروزر" }, colorSensitive: true);
     }
 
     private void SeedModeration(DateTimeOffset now)

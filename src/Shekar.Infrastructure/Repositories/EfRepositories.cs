@@ -317,6 +317,16 @@ public sealed class EfCarListingRepository : ICarListingRepository
     public async Task<IReadOnlyList<CarListing>> ListActiveAsync(ListingSource source, CancellationToken ct = default) =>
         await _db.CarListings.Where(l => l.Source == source && l.State == ListingState.Active).ToListAsync(ct);
 
+    public async Task<IReadOnlyList<CarListing>> ListUnmatchedAsync(int max, CancellationToken ct = default) =>
+        await _db.CarListings
+            .Where(l => l.State == ListingState.Active && l.VehicleModelId == null)
+            .OrderBy(l => l.Id).Take(max).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<CarListing>> ListMatchedActiveSinceAsync(DateTimeOffset sinceUtc, CancellationToken ct = default) =>
+        await _db.CarListings.AsNoTracking()
+            .Where(l => l.State == ListingState.Active && l.VehicleModelId != null && l.PublishedAt >= sinceUtc)
+            .ToListAsync(ct);
+
     public async Task<CarListing> AddAsync(CarListing listing, CancellationToken ct = default)
     {
         _db.CarListings.Add(listing);
@@ -327,6 +337,43 @@ public sealed class EfCarListingRepository : ICarListingRepository
     public async Task UpdateAsync(CarListing listing, CancellationToken ct = default)
     {
         _db.CarListings.Update(listing);
+        await _db.SaveChangesAsync(ct);
+    }
+}
+
+public sealed class EfVehicleModelRepository : IVehicleModelRepository
+{
+    private readonly ShekarDbContext _db;
+    public EfVehicleModelRepository(ShekarDbContext db) => _db = db;
+
+    public Task<VehicleModel?> GetAsync(int id, CancellationToken ct = default) =>
+        _db.VehicleModels.FirstOrDefaultAsync(m => m.Id == id, ct);
+
+    public async Task<IReadOnlyList<VehicleModel>> ListActiveAsync(CancellationToken ct = default) =>
+        await _db.VehicleModels.AsNoTracking().Where(m => m.IsActive).ToListAsync(ct);
+}
+
+public sealed class EfMarketSegmentStatRepository : IMarketSegmentStatRepository
+{
+    private readonly ShekarDbContext _db;
+    public EfMarketSegmentStatRepository(ShekarDbContext db) => _db = db;
+
+    public Task<MarketSegmentStat?> GetBySegmentKeyAsync(string segmentKey, CancellationToken ct = default) =>
+        _db.MarketSegmentStats.FirstOrDefaultAsync(s => s.SegmentKey == segmentKey, ct);
+
+    public async Task<IReadOnlyList<MarketSegmentStat>> ListAsync(CancellationToken ct = default) =>
+        await _db.MarketSegmentStats.AsNoTracking().ToListAsync(ct);
+
+    public async Task UpsertAsync(MarketSegmentStat stat, CancellationToken ct = default)
+    {
+        if (stat.Id == 0)
+        {
+            _db.MarketSegmentStats.Add(stat);
+        }
+        else
+        {
+            _db.MarketSegmentStats.Update(stat);
+        }
         await _db.SaveChangesAsync(ct);
     }
 }

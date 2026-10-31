@@ -126,8 +126,27 @@ public interface ICarListingRepository
     /// <summary>آگهی‌های فعالِ یک منبع (برای تشخیص حذف‌شده‌ها).</summary>
     Task<IReadOnlyList<CarListing>> ListActiveAsync(ListingSource source, CancellationToken ct = default);
 
+    /// <summary>آگهی‌های فعالِ نرمال‌نشده (VehicleModelId خالی) برای نرمال‌سازی.</summary>
+    Task<IReadOnlyList<CarListing>> ListUnmatchedAsync(int max, CancellationToken ct = default);
+
+    /// <summary>آگهی‌های فعالِ نرمال‌شده‌ی منتشرشده از زمان مشخص (ورودیِ اگریگیشن).</summary>
+    Task<IReadOnlyList<CarListing>> ListMatchedActiveSinceAsync(DateTimeOffset sinceUtc, CancellationToken ct = default);
+
     Task<CarListing> AddAsync(CarListing listing, CancellationToken ct = default);
     Task UpdateAsync(CarListing listing, CancellationToken ct = default);
+}
+
+public interface IVehicleModelRepository
+{
+    Task<VehicleModel?> GetAsync(int id, CancellationToken ct = default);
+    Task<IReadOnlyList<VehicleModel>> ListActiveAsync(CancellationToken ct = default);
+}
+
+public interface IMarketSegmentStatRepository
+{
+    Task<MarketSegmentStat?> GetBySegmentKeyAsync(string segmentKey, CancellationToken ct = default);
+    Task<IReadOnlyList<MarketSegmentStat>> ListAsync(CancellationToken ct = default);
+    Task UpsertAsync(MarketSegmentStat stat, CancellationToken ct = default);
 }
 
 public interface ICrawlRunRepository
