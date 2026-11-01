@@ -44,4 +44,11 @@ public sealed class PoliteFetchOptions
 
     /// <summary>نگاشت شناسه‌ی شهر → اسلاگ دیوار (مثلاً 1→tehran).</summary>
     public Dictionary<int, string> CitySlugs { get; set; } = new() { [1] = "tehran" };
+
+    /// <summary>
+    /// پارامترهای فیلتر ثابت (بدون علامت «?» ابتدایی) که به همه‌ی URL های کراول اضافه می‌شود.
+    /// مثال: business-type=personal%2C&amp;exchange=exclude-exchanges&amp;has-photo=true&amp;recent_ads=3h&amp;usage=0-200000
+    /// </summary>
+    public string FilterQuery { get; set; } =
+        "business-type=personal%2C&exchange=exclude-exchanges&has-photo=true&recent_ads=3h&usage=0-200000";
 }

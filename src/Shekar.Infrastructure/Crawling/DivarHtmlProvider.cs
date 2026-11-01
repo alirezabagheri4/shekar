@@ -47,10 +47,17 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
 
         for (int page = 0; page < _options.MaxPagesPerRun; page++)
         {
-            // صفحه‌ی دسته‌ی خودرو؛ صفحه‌بندی دیوار معمولاً با page در کوئری است.
+            // URL فیلتردار کاربر؛ برای صفحات بعدی page=N به فیلترها اضافه می‌شود.
+            string filterQuery = string.IsNullOrWhiteSpace(_options.FilterQuery)
+                ? string.Empty
+                : _options.FilterQuery.TrimStart('?', '&');
             string url = page == 0
-                ? $"{BaseUrl}/s/{slug}/car"
-                : $"{BaseUrl}/s/{slug}/car?page={page + 1}";
+                ? (string.IsNullOrEmpty(filterQuery)
+                    ? $"{BaseUrl}/s/{slug}/car"
+                    : $"{BaseUrl}/s/{slug}/car?{filterQuery}")
+                : (string.IsNullOrEmpty(filterQuery)
+                    ? $"{BaseUrl}/s/{slug}/car?page={page + 1}"
+                    : $"{BaseUrl}/s/{slug}/car?{filterQuery}&page={page + 1}");
 
             string? html = await session.GetHtmlAsync(url, ct);
             if (html is null)
