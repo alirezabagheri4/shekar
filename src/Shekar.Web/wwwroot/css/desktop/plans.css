@@ -1,10 +1,11 @@
 body{margin:0;background:#FFFFFF}
 button{font-family:inherit}
-.zbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border-radius:12px;font-weight:700;font-size:16px;border:0;cursor:pointer}
+a{text-decoration:none;color:inherit}
+.zbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:52px;border-radius:12px;font-weight:700;font-size:16px;border:0;cursor:pointer;text-decoration:none}
+.zbtn-p{background:#0F766E;color:#FFFFFF}
+.zbtn-p:hover{color:#FFFFFF;opacity:.92}
 .zbtn-s{background:#FFFFFF;color:#0F766E;border:1.5px solid #0F766E}
 .zbtn-s:hover{background:#E6F4F1;color:#0F766E}
-.zbtn-w{background:#111827;color:#FFFFFF}
-.zseg{min-height:44px;padding:0 22px;border-radius:10px;border:0;font-weight:700;font-size:15px;cursor:pointer;background:transparent;color:#6B7280;display:flex;align-items:center;gap:8px}
-.zseg-on{background:#FFFFFF;color:#111827;box-shadow:0 2px 8px rgba(17,24,39,.08)}
-.zplan{border:1px solid #E5E7EB}
+.zplan{border:1px solid #E5E7EB;transition:box-shadow .2s}
+.zplan:hover{box-shadow:0 8px 24px rgba(17,24,39,.06)}
 .zplan-rec{border:2px solid #0F766E;box-shadow:0 16px 40px rgba(15,118,110,.10)}
