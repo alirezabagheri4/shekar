@@ -1,5 +1,4 @@
 using Shekar.Application.Abstractions;
-
 using Shekar.Domain;
 using Shekar.Domain.Entities;
 using Shekar.Domain.Enums;
