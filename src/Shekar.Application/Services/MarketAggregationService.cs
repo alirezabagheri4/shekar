@@ -52,16 +52,19 @@ public sealed class MarketAggregationService : IMarketAggregationService
                 continue; // بدون مدل یا سال قابل‌سگمنت نیست
             }
 
-            bool colorInKey = l.PriceToman > DomainConstants.ColorMattersAboveToman
-                || (modelById.TryGetValue(vmId, out VehicleModel? vm) && vm.ColorSensitive);
-            string? colorKey = colorInKey ? TextNormalizer.Normalize(l.Color) : null;
+            modelById.TryGetValue(vmId, out VehicleModel? vm);
+            string? key = SegmentKey.ForListing(l, vm);
+            if (key is null)
+            {
+                continue;
+            }
+
+            Domain.Enums.MileageBucket bucket = DomainConstants.ResolveMileageBucket(l.MileageKm);
+            string? colorKey = SegmentKey.ColorInKey(l.PriceToman, vm) ? TextNormalizer.Normalize(l.Color) : null;
             if (colorKey is { Length: 0 })
             {
                 colorKey = null;
             }
-
-            MileageBucketOf(l, out var bucket);
-            string key = $"VM{vmId}|Y{year}|M{(byte)bucket}|B{(byte)l.BodyCondition}|C{colorKey ?? "-"}";
 
             if (!groups.TryGetValue(key, out SegmentAccumulator? acc))
             {
@@ -93,9 +96,6 @@ public sealed class MarketAggregationService : IMarketAggregationService
 
         return groups.Count;
     }
-
-    private static void MileageBucketOf(CarListing l, out Domain.Enums.MileageBucket bucket) =>
-        bucket = DomainConstants.ResolveMileageBucket(l.MileageKm);
 
     private sealed class SegmentAccumulator
     {

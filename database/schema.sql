@@ -452,3 +452,13 @@ INSERT INTO dbo.VehicleModels (Brand, Model, Trim, BodyType, LiquidityScore, Ali
     (N'بنز',      N'E250',     NULL,           N'سدان',   42, N'["benz e250","e250"]',            1, 1),
     (N'تویوتا',   N'لندکروزر', N'پرادو',       N'شاسی‌بلند', 55, N'["prado","لندکروزر"]',         1, 1);
 GO
+
+
+/* فاز ۴ — لینک شکار به آگهی منبع (خروجی اسکورینگ) */
+ALTER TABLE dbo.Hunts ADD SourceListingId BIGINT NULL;  -- آگهی خامِ منبعِ این شکار؛ NULL برای seed/دستی
+GO
+CREATE INDEX IX_Hunts_SourceListing ON dbo.Hunts(SourceListingId);
+GO
+EXEC sys.sp_addextendedproperty 'MS_Description', N'آگهی خامِ منبعِ این شکار (خروجی اسکورینگ)؛ NULL برای seed/دستی',
+    'SCHEMA','dbo','TABLE','Hunts','COLUMN','SourceListingId';
+GO

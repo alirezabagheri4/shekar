@@ -87,4 +87,19 @@ public sealed class MockHuntRepository : IHuntRepository
 
     public Task<Hunt?> GetAsync(int id, CancellationToken ct = default) =>
         Task.FromResult(_store.Hunts.FirstOrDefault(h => h.Id == id));
+
+    public Task<IReadOnlyList<Hunt>> ListPipelineAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<Hunt>>(_store.Hunts.Where(h => h.SourceListingId != null).ToList());
+
+    public Task<Hunt> AddAsync(Hunt hunt, CancellationToken ct = default)
+    {
+        lock (_store.Gate)
+        {
+            hunt.Id = _store.Hunts.Select(h => h.Id).DefaultIfEmpty(0).Max() + 1;
+            _store.Hunts.Add(hunt);
+        }
+        return Task.FromResult(hunt);
+    }
+
+    public Task UpdateAsync(Hunt hunt, CancellationToken ct = default) => Task.CompletedTask;
 }

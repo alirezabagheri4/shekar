@@ -30,6 +30,8 @@ public static class DependencyInjection
         services.AddSingleton<IVehicleModelMatcher, VehicleModelMatcher>();
         services.AddScoped<IVehicleNormalizationService, VehicleNormalizationService>();
         services.AddScoped<IMarketAggregationService, MarketAggregationService>();
+        services.AddSingleton<IHuntScorer, HuntScorer>();
+        services.AddScoped<IListingScoringService, ListingScoringService>();
         return services;
     }
 }

@@ -27,8 +27,10 @@ public sealed class HuntConfiguration : IEntityTypeConfiguration<Hunt>
         b.Property(x => x.IsNew).HasComment("نمایش برچسب «تازه»");
         b.Property(x => x.ImageFileName).HasMaxLength(120).HasComment("نام فایل تصویر؛ NULL=placeholder");
         b.Property(x => x.AdvertiserPhone).HasMaxLength(15).HasComment("شماره آگهی‌دهنده؛ برای حذف شماره‌های بلاک‌شده از پیشنهادها");
+        b.Property(x => x.SourceListingId).HasComment("آگهی خامِ منبعِ این شکار (خروجی اسکورینگ)؛ NULL برای seed/دستی");
 
         b.HasOne<City>().WithMany().HasForeignKey(x => x.CityId).OnDelete(DeleteBehavior.Restrict);
+        b.HasIndex(x => x.SourceListingId);
         b.HasOne(x => x.Analysis).WithOne().HasForeignKey<HuntAnalysis>("HuntId").OnDelete(DeleteBehavior.Cascade);
 
         // ایندکس‌های پرکاربرد لیست روزانه: شهر + تاریخ + وضعیت، و مرتب‌سازی‌ها.

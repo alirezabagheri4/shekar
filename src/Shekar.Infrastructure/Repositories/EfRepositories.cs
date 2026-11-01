@@ -119,6 +119,22 @@ public sealed class EfHuntRepository : IHuntRepository
             .Include(h => h.Analysis).ThenInclude(a => a!.Factors)
             .FirstOrDefaultAsync(h => h.Id == id, ct);
 
+    public async Task<IReadOnlyList<Hunt>> ListPipelineAsync(CancellationToken ct = default) =>
+        await _db.Hunts.Where(h => h.SourceListingId != null).ToListAsync(ct);
+
+    public async Task<Hunt> AddAsync(Hunt hunt, CancellationToken ct = default)
+    {
+        _db.Hunts.Add(hunt);
+        await _db.SaveChangesAsync(ct);
+        return hunt;
+    }
+
+    public async Task UpdateAsync(Hunt hunt, CancellationToken ct = default)
+    {
+        _db.Hunts.Update(hunt);
+        await _db.SaveChangesAsync(ct);
+    }
+
     /// <summary>کوئری پایه‌ی لیست روزانه با حذف شماره‌های بلاک‌شده (ضد دلال/اسپم).</summary>
     private IQueryable<Hunt> BaseDailyQuery(int cityId, DateTimeOffset start, DateTimeOffset next)
     {

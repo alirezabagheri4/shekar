@@ -51,6 +51,9 @@ public class Hunt
     /// <summary>شماره‌ی آگهی‌دهنده؛ برای حذف آگهی‌های شماره‌های بلاک‌شده از پیشنهادها.</summary>
     public string? AdvertiserPhone { get; set; }
 
+    /// <summary>آگهی خامِ منبعِ این شکار (خروجی اسکورینگ)؛ NULL برای شکارهای seed/دستی.</summary>
+    public long? SourceListingId { get; set; }
+
     /// <summary>تحلیل تفصیلی برای صفحه‌ی جزئیات؛ ممکن است هنوز موجود نباشد.</summary>
     public HuntAnalysis? Analysis { get; set; }
 }

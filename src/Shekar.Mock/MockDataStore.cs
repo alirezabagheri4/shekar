@@ -121,6 +121,17 @@ public sealed class MockDataStore
         {
             h.AdvertiserPhone ??= $"09120{h.Id:0000}00";
         }
+
+        // تضمین اینکه همه‌ی شکارهای seed روی «امروزِ تهران» بمانند (مستقل از ساعتِ اجرا).
+        DateTimeOffset tehranNow = Services.TehranTime.ToTehran(now);
+        DateTimeOffset todayFloorUtc = new DateTimeOffset(tehranNow.Date, tehranNow.Offset).AddMinutes(1).ToUniversalTime();
+        foreach (Hunt h in Hunts)
+        {
+            if (h.PublishedAt < todayFloorUtc)
+            {
+                h.PublishedAt = todayFloorUtc;
+            }
+        }
     }
 
     private void SeedPlanLimits()

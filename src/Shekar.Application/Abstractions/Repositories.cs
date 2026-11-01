@@ -49,6 +49,12 @@ public interface IHuntRepository
     Task<IReadOnlyList<Hunt>> ListTodayAsync(int cityId, CancellationToken ct = default);
 
     Task<Hunt?> GetAsync(int id, CancellationToken ct = default);
+
+    /// <summary>شکارهای تولیدشده توسط پایپ‌لاین (SourceListingId != null)؛ برای هماهنگ‌سازی اسکورینگ.</summary>
+    Task<IReadOnlyList<Hunt>> ListPipelineAsync(CancellationToken ct = default);
+
+    Task<Hunt> AddAsync(Hunt hunt, CancellationToken ct = default);
+    Task UpdateAsync(Hunt hunt, CancellationToken ct = default);
 }
 
 public interface IAppraisalRepository

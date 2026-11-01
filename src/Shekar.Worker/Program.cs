@@ -45,6 +45,15 @@ builder.Services.AddQuartz(q =>
         .WithIdentity("AggregateJob-trigger")
         .StartAt(DateTimeOffset.UtcNow.AddSeconds(20))   // کمی بعد از اولین کراول
         .WithSimpleSchedule(s => s.WithIntervalInMinutes(aggregateMinutes).RepeatForever()));
+
+    int scoreMinutes = Math.Max(1, builder.Configuration.GetValue<int?>("Score:IntervalMinutes") ?? 10);
+    var scoreJob = new JobKey("ScoreJob");
+    q.AddJob<ScoreJob>(o => o.WithIdentity(scoreJob));
+    q.AddTrigger(t => t
+        .ForJob(scoreJob)
+        .WithIdentity("ScoreJob-trigger")
+        .StartAt(DateTimeOffset.UtcNow.AddSeconds(35))   // بعد از اولین اگریگیشن
+        .WithSimpleSchedule(s => s.WithIntervalInMinutes(scoreMinutes).RepeatForever()));
 });
 builder.Services.AddQuartzHostedService(o => o.WaitForJobsToComplete = true);
 
