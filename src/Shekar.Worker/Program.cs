@@ -22,8 +22,16 @@ else
     builder.Services.AddMockInfrastructure();
 }
 
-// منبع آگهی (فعلاً ماک؛ بعداً provider واقعیِ دیوار جایگزین می‌شود).
-builder.Services.AddMockCrawlProvider();
+// منبع آگهی: ماک (پیش‌فرض) یا کراولر واقعی دیوار (Crawl:Provider = "Divar").
+string crawlProvider = builder.Configuration["Crawl:Provider"] ?? "Mock";
+if (string.Equals(crawlProvider, "Divar", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddDivarCrawler(builder.Configuration);
+}
+else
+{
+    builder.Services.AddMockCrawlProvider();
+}
 
 // زمان‌بندی با Quartz — کراول هر N دقیقه، اگریگیشن هر M دقیقه (پیش‌فرض ساعتی).
 int crawlMinutes = Math.Max(1, builder.Configuration.GetValue<int?>("Crawl:IntervalMinutes") ?? 5);

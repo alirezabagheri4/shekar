@@ -1,6 +1,9 @@
+using System.Net;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Shekar.Application.Abstractions;
+using Shekar.Infrastructure.Crawling;
 using Shekar.Infrastructure.Persistence;
 using Shekar.Infrastructure.Repositories;
 
@@ -9,6 +12,24 @@ namespace Shekar.Infrastructure;
 /// <summary>ثبت لایه‌ی دیتابیس واقعی (EF Core 6 + SQL Server) و Repositoryها.</summary>
 public static class DependencyInjection
 {
+    /// <summary>کراولر واقعی دیوار + موتور درخواستِ مؤدب (ضدبلاک). برای میزبان Worker.</summary>
+    public static IServiceCollection AddDivarCrawler(this IServiceCollection services, IConfiguration config)
+    {
+        services.Configure<PoliteFetchOptions>(config.GetSection("Crawl:Polite"));
+        services.AddSingleton<IWebFetcher, PoliteWebFetcher>();
+
+        services.AddHttpClient("crawler")
+            .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+            {
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate | DecompressionMethods.Brotli,
+                UseCookies = true,                 // رفتار طبیعیِ نشست مرورگر
+                CookieContainer = new CookieContainer()
+            });
+
+        services.AddSingleton<IListingSourceProvider, DivarHtmlProvider>();
+        return services;
+    }
+
     public static IServiceCollection AddSqlServerInfrastructure(this IServiceCollection services, string connectionString)
     {
         services.AddDbContext<ShekarDbContext>(options =>

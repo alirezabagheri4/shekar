@@ -29,6 +29,13 @@ public sealed class CrawlJob : IJob
         CancellationToken ct = context.CancellationToken;
         int maxAgeHours = _config.GetValue<int?>("Crawl:MaxAgeHours") ?? 24;
 
+        // بی‌نظمیِ انسان‌مانند: هر پاس با تأخیرِ تصادفی شروع شود تا زمان‌بندی دقیقاً دوره‌ای نباشد.
+        int jitterSeconds = _config.GetValue<int?>("Crawl:StartJitterSeconds") ?? 0;
+        if (jitterSeconds > 0)
+        {
+            await Task.Delay(TimeSpan.FromSeconds(Random.Shared.Next(0, jitterSeconds + 1)), ct);
+        }
+
         using IServiceScope scope = _scopeFactory.CreateScope();
         IServiceProvider sp = scope.ServiceProvider;
 
