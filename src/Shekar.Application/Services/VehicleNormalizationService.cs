@@ -47,6 +47,7 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
             }
         }
 
+
         return matched;
     }
 }
