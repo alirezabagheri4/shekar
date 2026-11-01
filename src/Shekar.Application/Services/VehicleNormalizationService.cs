@@ -35,6 +35,7 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
         IReadOnlyList<CarListing> pending = await _listings.ListUnmatchedAsync(maxBatch, ct);
         int matched = 0;
 
+
         foreach (CarListing listing in pending)
         {
             ct.ThrowIfCancellationRequested();
