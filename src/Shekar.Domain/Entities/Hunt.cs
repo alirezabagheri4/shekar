@@ -54,6 +54,26 @@ public class Hunt
     /// <summary>آگهی خامِ منبعِ این شکار (خروجی اسکورینگ)؛ NULL برای شکارهای seed/دستی.</summary>
     public long? SourceListingId { get; set; }
 
+    // ── مشخصات فنی خودرو (از صفحه‌ی جزئیات آگهی منبع) ──
+
+    public string? Color { get; set; }
+    public string? BrandModel { get; set; }
+    public string? GearboxType { get; set; }
+    public string? FuelType { get; set; }
+    public int? InsuranceMonths { get; set; }
+    public string? EngineCondition { get; set; }
+    public string? ChassisCondition { get; set; }
+    public string? BodyConditionText { get; set; }
+    public string? GearboxCondition { get; set; }
+    public long? BasePriceToman { get; set; }
+    public string? SellerDescription { get; set; }
+    public string? SellerName { get; set; }
+    public string? SourceUrl { get; set; }
+    public int ImageCount { get; set; }
+    public string? AiSummary { get; set; }
+    public int? ResellDaysMin { get; set; }
+    public int? ResellDaysMax { get; set; }
+
     /// <summary>تحلیل تفصیلی برای صفحه‌ی جزئیات؛ ممکن است هنوز موجود نباشد.</summary>
     public HuntAnalysis? Analysis { get; set; }
 }

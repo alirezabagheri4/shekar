@@ -5,14 +5,14 @@
     var d = Model.Detail;
     var ringColor = c.IsGolden ? "#D4A017" : "#0F766E";
     string Mil(long v) => ViewFormat.Number(v / 1_000_000) + " میلیون";
-    var meta = c.MileageKm is null
-        ? $"{ViewFormat.RelativeTime(c.PublishedAt, Model.Now)} در تهران، {c.Location}"
-        : $"{ViewFormat.RelativeTime(c.PublishedAt, Model.Now)} در تهران، {c.Location}";
+    string BarColor(int s) => s >= 80 ? "#0F766E" : s >= 60 ? "#14B8A6" : s >= 40 ? "#F59E0B" : "#EF4444";
 }
 @section css {
 <link rel="stylesheet" href="~/css/mobile/base.css"><link rel="stylesheet" href="~/css/mobile/hunt-detail.css">
 }
-<div dir="rtl" style="width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh; font-family: Vazirmatn, Tahoma, sans-serif; color: #111827; background: #FFFFFF; display: flex; flex-direction: column">
+<div dir="rtl" style="width: 100%; max-width: 480px; margin: 0 auto; min-height: 100vh; font-family: Vazirmatn, Tahoma, sans-serif; color: #111827; background: #FFFFFF; display: flex; flex-direction: column; padding-bottom: 80px">
+
+@* ── هیرو عکس ── *@
 <div style="position: relative; height: 290px; background: #EEF2F2; display: grid; place-items: center">
 @if (!string.IsNullOrEmpty(c.ImageFileName))
 {
@@ -27,19 +27,39 @@ else
 {
     <span style="position: absolute; top: 20px; left: 14px; background: #D4A017; color: #111827; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px">فرصت طلایی</span>
 }
+@if (d.ImageCount > 0)
+{
+    <span style="position: absolute; bottom: 10px; left: 10px; background: rgba(17,24,39,.7); color: #FFFFFF; font-size: 12px; padding: 3px 8px; border-radius: 999px">@ViewFormat.Digits("۱") از @ViewFormat.Digits(d.ImageCount.ToString())</span>
+}
+@if (d.ImageCount > 1)
+{
+<div style="position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px">
+<span class="zdot zdot-on"></span>
+@for (int i = 1; i < d.ImageCount && i < 6; i++)
+{
+    <span class="zdot"></span>
+}
+</div>
+}
 </div>
 
 <div style="padding: 16px; display: flex; flex-direction: column; gap: 16px">
+
+@* ── عنوان و قیمت ── *@
 <div style="display: flex; flex-direction: column; gap: 8px">
 <h1 style="margin: 0; font-size: 20px; font-weight: 800; line-height: 1.6">@c.Title</h1>
-<div style="display: flex; align-items: center; justify-content: space-between"><b style="font-size: 22px">@ViewFormat.Number(c.PriceToman) <span style="font-size: 13px; font-weight: 500; color: #6B7280">تومان</span></b><span style="background: #E6F4F1; color: #0F766E; font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 8px">@ViewFormat.Digits(c.BelowMarketPercent.ToString())٪ زیر بازار</span></div>
-<span style="color: #6B7280; font-size: 13px">@meta</span>
+<div style="display: flex; align-items: center; justify-content: space-between">
+<b style="font-size: 22px">@ViewFormat.Number(c.PriceToman) <span style="font-size: 13px; font-weight: 500; color: #6B7280">تومان</span></b>
+<span style="background: #E6F4F1; color: #0F766E; font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 8px">@ViewFormat.Digits(c.BelowMarketPercent.ToString())٪ زیر بازار</span>
+</div>
+<span style="color: #6B7280; font-size: 13px; display: flex; gap: 6px; align-items: center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg>@ViewFormat.RelativeTime(c.PublishedAt, Model.Now) در تهران، @c.Location</span>
 </div>
 
+@* ── امتیاز شکار ── *@
 <section class="zbox" style="display: flex; flex-direction: column; gap: 14px">
 <div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 17px">امتیاز شکار</h2><span style="font-size: 12px; color: #6B7280">بر اساس @ViewFormat.Digits(d.ComparableCount.ToString()) آگهی مشابه</span></div>
 <div style="display: flex; align-items: center; gap: 14px">
-<span style="position: relative; display: inline-grid; place-items: center; flex: none; width: 104px; height: 104px"><svg width="104" height="104" viewBox="0 0 128 128" role="img" aria-label="امتیاز شکار @ViewFormat.Digits(c.Score.ToString()) از ۱۰۰"><circle cx="64" cy="64" r="54" fill="none" stroke="#F3F4F6" stroke-width="12"></circle><circle cx="64" cy="64" r="54" fill="none" stroke="@ringColor" stroke-width="12" stroke-linecap="round" stroke-dasharray="@(c.Score * 3.393) 339.3" transform="rotate(-90 64 64)"></circle></svg><span aria-hidden="true" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1"><b style="font-size: 30px; font-weight: 800; color: #111827">@ViewFormat.Digits(c.Score.ToString())</b><span style="font-size: 12px; color: #6B7280">از ۱۰۰</span></span></span>
+<span style="position: relative; display: inline-grid; place-items: center; flex: none; width: 104px; height: 104px"><svg width="104" height="104" viewBox="0 0 128 128" role="img" aria-label="امتیاز شکار @ViewFormat.Digits(c.Score.ToString()) از ۱۰۰"><circle cx="64" cy="64" r="54" fill="none" stroke="#F3F4F6" stroke-width="12"></circle><circle cx="64" cy="64" r="54" fill="none" stroke="@ringColor" stroke-width="12" stroke-linecap="round" class="zring" stroke-dasharray="@(c.Score * 3.393) 339.3" transform="rotate(-90 64 64)"></circle></svg><span aria-hidden="true" style="position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1"><b style="font-size: 30px; font-weight: 800; color: #111827">@ViewFormat.Digits(c.Score.ToString())</b><span style="font-size: 12px; color: #6B7280">از ۱۰۰</span></span></span>
 <div style="display: flex; flex-direction: column; gap: 6px; min-width: 0">
 @if (c.IsGolden)
 {
@@ -48,45 +68,170 @@ else
 <span style="font-size: 13px; color: #6B7280; line-height: 1.7">@d.Summary</span>
 </div>
 </div>
+@* ── فاکتورها با progress bar ── *@
 <div style="display: flex; flex-direction: column; gap: 12px">
 @foreach (var f in d.Factors)
 {
+    var barColor = BarColor(f.Score);
     <div style="display: flex; flex-direction: column; gap: 4px">
-    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px"><b>@f.Name</b><span style="font-size: 12px; font-weight: 700; color: #0F766E">@f.Rating</span></div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 14px"><b>@f.Name</b><span style="display: inline-flex; align-items: center; gap: 6px"><span style="font-size: 12px; font-weight: 700; color: @barColor">@f.Rating</span><b style="min-width: 24px; text-align: left">@ViewFormat.Digits(f.Score.ToString())</b></span></div>
+    <div style="height: 7px; background: #F3F4F6; border-radius: 8px; overflow: hidden"><div class="zbarw" style="height: 100%; width: @(f.Score)%; background: @barColor; border-radius: 8px"></div></div>
     <span style="font-size: 12px; color: #6B7280">@f.Detail</span>
     </div>
 }
 </div>
 </section>
 
+@* ── حساب‌وکتاب سود ── *@
 <section class="zbox" style="display: flex; flex-direction: column; gap: 14px">
 <div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 17px">حساب‌وکتاب سود</h2><span style="font-size: 12px; color: #0F766E; font-weight: 700">اطمینان: @d.Confidence</span></div>
-<div style="display: flex; justify-content: space-between; margin-top: 2px; font-size: 11px; color: #6B7280"><span>گرون</span><span>منصفانه · @ViewFormat.Price(d.FairRangeMinToman) تا @ViewFormat.Price(d.FairRangeMaxToman)</span><span style="color: #8A6A0B; font-weight: 700">فرصت طلایی</span></div>
+@{
+    double fairMin = d.FairRangeMinToman > 0 ? d.FairRangeMinToman : c.MarketMedianToman * 0.95;
+    double fairMax = d.FairRangeMaxToman > 0 ? d.FairRangeMaxToman : c.MarketMedianToman * 1.05;
+    double totalRange = fairMax * 1.15;
+    double adPct = totalRange > 0 ? (c.PriceToman / totalRange * 100) : 20;
+    adPct = Math.Clamp(adPct, 5, 95);
+}
+<div style="padding-top: 28px; position: relative">
+<div style="position: absolute; top: 0; left: @(adPct)%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center"><span style="background: #111827; color: #FFFFFF; font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 6px; white-space: nowrap">این آگهی</span><span style="width: 2px; height: 10px; background: #111827"></span></div>
+<div style="display: flex; height: 8px; border-radius: 999px; overflow: hidden; gap: 3px"><span style="flex: 1; background: #FCA5A5"></span><span style="flex: 1.2; background: #5EEAD4"></span><span style="flex: 1; background: #D4A017"></span></div>
+<div style="display: flex; justify-content: space-between; margin-top: 4px; font-size: 10px; color: #6B7280"><span>گرون</span><span>منصفانه</span><span style="color: #8A6A0B; font-weight: 700">فرصت طلایی</span></div>
+</div>
 <dl style="margin: 0; display: flex; flex-direction: column; font-size: 14px">
 <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #EEF0F2"><dt style="color: #6B7280">میانه‌ی قیمت بازار</dt><dd style="margin: 0; font-weight: 700">@Mil(c.MarketMedianToman)</dd></div>
 <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #EEF0F2"><dt style="color: #6B7280">قیمت این آگهی</dt><dd style="margin: 0; font-weight: 700">− @Mil(c.PriceToman)</dd></div>
 <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #EEF0F2"><dt style="color: #6B7280">هزینه‌ی نقل‌وانتقال و فروش</dt><dd style="margin: 0; font-weight: 700">− @Mil(d.TransactionCostToman)</dd></div>
 </dl>
-<div style="display: flex; justify-content: space-between; align-items: center; background: #0F766E; color: #FFFFFF; border-radius: 14px; padding: 12px 14px"><span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #CDEBE5">سود خالص تخمینی</span><b style="font-size: 20px">@Mil(c.EstimatedProfitToman) تومان</b></span></div>
+<div style="display: flex; justify-content: space-between; align-items: center; background: #0F766E; color: #FFFFFF; border-radius: 14px; padding: 12px 14px">
+<span style="display: flex; flex-direction: column"><span style="font-size: 12px; color: #CDEBE5">سود خالص تخمینی</span><b style="font-size: 20px">@Mil(c.EstimatedProfitToman) تومان</b></span>
+@if (d.ResellDaysMin.HasValue && d.ResellDaysMax.HasValue)
+{
+    <span style="text-align: left; font-size: 11px; color: #CDEBE5; line-height: 1.6">فروش دوباره<br><b style="color: #FFFFFF; font-size: 12px">@ViewFormat.Digits(d.ResellDaysMin.Value.ToString()) تا @ViewFormat.Digits(d.ResellDaysMax.Value.ToString()) روز</b></span>
+}
+</div>
 </section>
 
+@* ── برچسب‌های ریسک ── *@
 @if (d.Risks.Count > 0)
 {
-    <div style="display: flex; flex-wrap: wrap; gap: 8px">
-    @foreach (var r in d.Risks)
-    {
-        <span style="background: #FEF3C7; color: #92400E; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px">@r</span>
-    }
-    </div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+@foreach (var r in d.Risks)
+{
+    var isPositive = r.Contains("سند") || r.Contains("بیمه") || r.Contains("سالم") || r.Contains("نقدشوندگی");
+    <span class="@(isPositive ? "zrisk-pos" : "zrisk-neg")">@r</span>
+}
+</div>
 }
 
-<nav aria-label="خدمات">
-<a href="/appraise" class="zrow"><span>بررسی و کارشناسی</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+@* ── خلاصه هوش مصنوعی ── *@
+@if (!string.IsNullOrEmpty(d.AiSummary))
+{
+<div class="zai-box" style="display: flex; gap: 10px; align-items: flex-start">
+<span style="width: 32px; height: 32px; border-radius: 8px; background: #0F766E; display: grid; place-items: center; flex: none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M6 6l2 2M16 16l2 2M6 18l2-2M16 8l2-2"></path></svg></span>
+<div><b style="display: block; margin-bottom: 2px; color: #0F766E; font-size: 13px">خلاصه‌ی هوش مصنوعی</b><p style="margin: 0; line-height: 1.8; font-size: 13px">@d.AiSummary</p></div>
+</div>
+}
+
+@* ── مشخصات خودرو ── *@
+<section class="zbox" aria-labelledby="sp">
+<h2 id="sp" style="margin: 0 0 8px; font-size: 17px">مشخصات</h2>
+<dl style="margin: 0; display: flex; flex-direction: column">
+@if (c.MileageKm is not null)
+{
+    <div class="zspec-row"><dt>کارکرد</dt><dd>@ViewFormat.Digits(c.MileageKm.Value.ToString("N0")) کیلومتر</dd></div>
+}
+else
+{
+    <div class="zspec-row"><dt>کارکرد</dt><dd>صفر کیلومتر</dd></div>
+}
+<div class="zspec-row"><dt>مدل (سال تولید)</dt><dd>@c.ModelYear</dd></div>
+@if (!string.IsNullOrEmpty(d.Color))
+{
+    <div class="zspec-row"><dt>رنگ</dt><dd>@d.Color</dd></div>
+}
+@if (!string.IsNullOrEmpty(d.BrandModel))
+{
+    <div class="zspec-row"><dt>برند و مدل</dt><dd>@d.BrandModel</dd></div>
+}
+@if (d.InsuranceMonths.HasValue)
+{
+    <div class="zspec-row"><dt>بیمه‌ی شخص ثالث</dt><dd>@ViewFormat.Digits(d.InsuranceMonths.Value.ToString()) ماه</dd></div>
+}
+@if (!string.IsNullOrEmpty(d.GearboxType))
+{
+    <div class="zspec-row"><dt>نوع گیربکس</dt><dd>@d.GearboxType</dd></div>
+}
+@if (!string.IsNullOrEmpty(d.FuelType))
+{
+    <div class="zspec-row"><dt>نوع سوخت</dt><dd>@d.FuelType</dd></div>
+}
+@if (d.BasePriceToman.HasValue)
+{
+    <div class="zspec-row"><dt>قیمت پایه</dt><dd>@ViewFormat.PriceToman(d.BasePriceToman.Value)</dd></div>
+}
+@if (!string.IsNullOrEmpty(d.EngineCondition))
+{
+    <div class="zspec-row"><dt>وضعیت موتور</dt><dd>@d.EngineCondition</dd></div>
+}
+@if (!string.IsNullOrEmpty(d.ChassisCondition))
+{
+    <div class="zspec-row"><dt>وضعیت شاسی‌ها</dt><dd>@d.ChassisCondition</dd></div>
+}
+@if (!string.IsNullOrEmpty(d.BodyConditionText))
+{
+    <div class="zspec-row"><dt>وضعیت بدنه</dt><dd>@d.BodyConditionText</dd></div>
+}
+@if (!string.IsNullOrEmpty(d.GearboxCondition))
+{
+    <div class="zspec-row"><dt>وضعیت گیربکس</dt><dd>@d.GearboxCondition</dd></div>
+}
+</dl>
+</section>
+
+@* ── خدمات ── *@
+<nav aria-label="خدمات" style="display: flex; flex-direction: column">
+<a href="/appraise" class="zrow"><span style="display: flex; gap: 10px; align-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" aria-hidden="true"><path d="M9 12l2 2 4-4"></path><circle cx="12" cy="12" r="9"></circle></svg>بررسی و کارشناسی</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
+<a href="/appraise" class="zrow"><span style="display: flex; gap: 10px; align-items: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"></path></svg>ارزیابی قیمت</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
 </nav>
+
+@* ── توضیحات فروشنده ── *@
+@if (!string.IsNullOrEmpty(d.SellerDescription))
+{
+<section class="zbox" style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap">
+<h2 style="margin: 0; font-size: 17px">توضیحات فروشنده</h2>
+@if (!string.IsNullOrEmpty(d.SellerName))
+{
+    <span style="background: #F6F8F8; padding: 4px 10px; border-radius: 999px; font-size: 12px">فروشنده · @d.SellerName</span>
+}
+</div>
+<p style="margin: 0; line-height: 1.9; color: #374151; font-size: 14px">@d.SellerDescription</p>
+</section>
+}
+
+@* ── موقعیت ── *@
+<section class="zbox" style="display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-size: 17px">موقعیت</h2>
+<div style="height: 180px; border-radius: 12px; background: #F1F5F4; position: relative; overflow: hidden">
+<svg width="100%" height="100%" viewBox="0 0 800 180" preserveAspectRatio="xMidYMid slice" role="img" aria-label="نقشه‌ی موقعیت تقریبی: تهران، @c.Location"><path d="M0 40 L800 60 M0 130 L800 110 M140 0 L180 180 M420 0 L400 180 M640 0 L690 180" stroke="#FFFFFF" stroke-width="12"></path><path d="M0 85 Q300 60 800 90" stroke="#FDE68A" stroke-width="8" fill="none"></path><rect x="470" y="120" width="100" height="50" rx="8" fill="#D7EDE6"></rect><circle cx="400" cy="82" r="36" fill="#0F766E" opacity=".14"></circle><path d="M400 50c-12 0-20 8-20 19 0 14 20 32 20 32s20-18 20-32c0-11-8-19-20-19z" fill="#0F766E"></path><circle cx="400" cy="69" r="7" fill="#FFFFFF"></circle></svg>
+</div>
+<span style="color: #6B7280; font-size: 13px">تهران، @c.Location — موقعیت تقریبی</span>
+</section>
+
 <p style="margin: 0; font-size: 12px; color: #6B7280; text-align: center">قیمت و سود تخمینیه و تضمینی نیست؛ قبل از خرید حتماً کارشناسی کن.</p>
 </div>
 
-<div style="position: sticky; bottom: 0; margin-top: auto; background: #FFFFFF; border-top: 1px solid #EEF0F2; padding: 12px 16px 20px">
-<a href="#" class="zbtn zbtn-p">تماس از طریق آگهی اصلی<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"></path></svg></a>
+@* ── دکمه‌ی sticky پایین ── *@
+<div style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 20; background: #FFFFFF; border-top: 1px solid #EEF0F2; padding: 12px 16px 20px">
+<div style="max-width: 480px; margin: 0 auto">
+@if (!string.IsNullOrEmpty(d.SourceUrl))
+{
+    <a href="@d.SourceUrl" target="_blank" rel="noopener" class="zbtn zbtn-p">تماس از طریق آگهی اصلی<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"></path></svg></a>
+}
+else
+{
+    <a href="#" class="zbtn zbtn-p">تماس از طریق آگهی اصلی<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"></path></svg></a>
+}
+</div>
 </div>
 </div>

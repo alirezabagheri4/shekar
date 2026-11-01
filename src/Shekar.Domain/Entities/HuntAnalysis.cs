@@ -26,4 +26,4 @@ public class HuntAnalysis
 }
 
 /// <summary>یک سنجه‌ی امتیاز با برچسب کیفی و توضیح.</summary>
-public sealed record AnalysisFactor(string Name, string Rating, string Detail);
+public sealed record AnalysisFactor(string Name, string Rating, string Detail, int Score = 0);

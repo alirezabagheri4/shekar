@@ -61,7 +61,7 @@ public sealed record HuntListDto
 }
 
 /// <summary>سنجه‌ی امتیاز در جزئیات.</summary>
-public sealed record AnalysisFactorDto(string Name, string Rating, string Detail);
+public sealed record AnalysisFactorDto(string Name, string Rating, string Detail, int Score = 0);
 
 /// <summary>جزئیات کامل یک شکار (برای صفحه‌ی hunt-detail و نتیجه‌ی کارشناسی).</summary>
 public sealed record HuntDetailDto
@@ -74,6 +74,25 @@ public sealed record HuntDetailDto
     public string Summary { get; init; } = string.Empty;
     public IReadOnlyList<AnalysisFactorDto> Factors { get; init; } = Array.Empty<AnalysisFactorDto>();
     public IReadOnlyList<string> Risks { get; init; } = Array.Empty<string>();
+
+    // ── مشخصات فنی خودرو ──
+    public string? Color { get; init; }
+    public string? BrandModel { get; init; }
+    public string? GearboxType { get; init; }
+    public string? FuelType { get; init; }
+    public int? InsuranceMonths { get; init; }
+    public string? EngineCondition { get; init; }
+    public string? ChassisCondition { get; init; }
+    public string? BodyConditionText { get; init; }
+    public string? GearboxCondition { get; init; }
+    public long? BasePriceToman { get; init; }
+    public string? SellerDescription { get; init; }
+    public string? SellerName { get; init; }
+    public string? SourceUrl { get; init; }
+    public int ImageCount { get; init; }
+    public string? AiSummary { get; init; }
+    public int? ResellDaysMin { get; init; }
+    public int? ResellDaysMax { get; init; }
 
     /// <summary>R9 — اجزای محاسبه‌ی سود.</summary>
     public long TransactionCostToman { get; init; }

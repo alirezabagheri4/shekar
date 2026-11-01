@@ -29,6 +29,25 @@ public sealed class HuntConfiguration : IEntityTypeConfiguration<Hunt>
         b.Property(x => x.AdvertiserPhone).HasMaxLength(15).HasComment("شماره آگهی‌دهنده؛ برای حذف شماره‌های بلاک‌شده از پیشنهادها");
         b.Property(x => x.SourceListingId).HasComment("آگهی خامِ منبعِ این شکار (خروجی اسکورینگ)؛ NULL برای seed/دستی");
 
+        // ── مشخصات فنی خودرو ──
+        b.Property(x => x.Color).HasMaxLength(30).HasComment("رنگ خودرو");
+        b.Property(x => x.BrandModel).HasMaxLength(100).HasComment("برند و مدل، مثل «پژو ۲۰۷ پانوراما»");
+        b.Property(x => x.GearboxType).HasMaxLength(20).HasComment("نوع گیربکس: دنده‌ای/اتوماتیک");
+        b.Property(x => x.FuelType).HasMaxLength(20).HasComment("نوع سوخت: بنزینی/دوگانه‌سوز/برقی/هیبرید");
+        b.Property(x => x.InsuranceMonths).HasComment("ماه‌های باقی‌مانده بیمه شخص ثالث");
+        b.Property(x => x.EngineCondition).HasMaxLength(30).HasComment("وضعیت موتور");
+        b.Property(x => x.ChassisCondition).HasMaxLength(30).HasComment("وضعیت شاسی");
+        b.Property(x => x.BodyConditionText).HasMaxLength(100).HasComment("وضعیت بدنه به متن");
+        b.Property(x => x.GearboxCondition).HasMaxLength(30).HasComment("وضعیت گیربکس");
+        b.Property(x => x.BasePriceToman).HasComment("قیمت پایه به تومان (قیمت صفر/کارخانه)");
+        b.Property(x => x.SellerDescription).HasMaxLength(1000).HasComment("توضیحات فروشنده");
+        b.Property(x => x.SellerName).HasMaxLength(80).HasComment("نام فروشنده");
+        b.Property(x => x.SourceUrl).HasMaxLength(300).HasComment("لینک آگهی منبع");
+        b.Property(x => x.ImageCount).HasComment("تعداد تصاویر آگهی");
+        b.Property(x => x.AiSummary).HasMaxLength(500).HasComment("خلاصه هوش مصنوعی");
+        b.Property(x => x.ResellDaysMin).HasComment("حداقل روز برای فروش مجدد");
+        b.Property(x => x.ResellDaysMax).HasComment("حداکثر روز برای فروش مجدد");
+
         b.HasOne<City>().WithMany().HasForeignKey(x => x.CityId).OnDelete(DeleteBehavior.Restrict);
         b.HasIndex(x => x.SourceListingId);
         b.HasOne(x => x.Analysis).WithOne().HasForeignKey<HuntAnalysis>("HuntId").OnDelete(DeleteBehavior.Cascade);
@@ -74,6 +93,7 @@ public sealed class HuntAnalysisConfiguration : IEntityTypeConfiguration<HuntAna
             f.Property(x => x.Name).HasMaxLength(40).HasComment("نام سنجه");
             f.Property(x => x.Rating).HasMaxLength(20).HasComment("برچسب کیفی، مثل «عالی»");
             f.Property(x => x.Detail).HasMaxLength(200).HasComment("توضیح سنجه");
+            f.Property(x => x.Score).HasComment("امتیاز عددی سنجه ۰ تا ۱۰۰");
         });
     }
 }
