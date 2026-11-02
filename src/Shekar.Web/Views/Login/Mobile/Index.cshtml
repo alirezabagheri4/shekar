@@ -21,7 +21,7 @@
 <input type="hidden" name="returnUrl" value="@ViewData["ReturnUrl"]" />
 <div style="display: flex; flex-direction: column; gap: 8px">
 <label for="ph" style="font-weight: 600; font-size: 14px">شماره موبایل</label>
-<input id="ph" name="Mobile" class="zin" type="tel" inputmode="numeric" dir="ltr" placeholder="09xxxxxxxxx" value="" style="text-align: left" required>
+<input id="ph" name="Mobile" class="zin" type="tel" inputmode="numeric" dir="ltr" placeholder="09xxxxxxxxx" value="" style="text-align: left" required oninput="this.value=this.value.replace(/[۰-۹]/g,function(c){return c.charCodeAt(0)-0x06F0;}).replace(/[٠-٩]/g,function(c){return c.charCodeAt(0)-0x0660;})">
 <span asp-validation-summary="All" style="color: #DC2626; font-size: 12px"></span>
 </div>
 <div style="margin-top: auto; display: flex; flex-direction: column; gap: 10px"><button type="submit" class="zbtn zbtn-p" style="border: 0; cursor: pointer; font-family: inherit">کد رو بفرست</button><p style="margin: 0; font-size: 12px; color: #6B7280; text-align: center">ورود یعنی پذیرش <a href="#">قوانین شکار</a>.</p></div>
