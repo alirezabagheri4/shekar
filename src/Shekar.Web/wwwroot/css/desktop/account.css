@@ -2,7 +2,10 @@ body{margin:0;background:#F6F8F8}
 button{font-family:inherit}
 .zbox{background:#FFFFFF;border-radius:20px;padding:24px;display:flex;flex-direction:column;gap:16px}
 .zbtn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 22px;border-radius:12px;font-weight:700;font-size:15px;border:0;cursor:pointer}
+.zbtn-p{background:#0F766E;color:#FFFFFF}
+.zbtn-p:hover{color:#FFFFFF}
 .zbtn-s{background:#FFFFFF;color:#0F766E;border:1.5px solid #0F766E}
+a{text-decoration:none;color:inherit}
 .zside{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 14px;border-radius:10px;color:#111827;font-weight:500}
 .zside:hover{background:#F6F8F8;color:#111827}
 .zside-on{background:#E6F4F1;color:#0F766E;font-weight:700}

@@ -69,7 +69,9 @@ else
     app.UseHsts();
 }
 
-app.UseHttpsRedirection();
+// در محیط Docker/Liara، SSL توسط reverse proxy مدیریت می‌شود
+if (!app.Environment.IsProduction())
+    app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();

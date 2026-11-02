@@ -1,0 +1,5 @@
+{
+  "app": "shekar",
+  "port": 8080,
+  "platform": "docker"
+}
