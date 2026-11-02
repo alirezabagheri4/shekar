@@ -11,41 +11,68 @@
         _ => "background: #E6F4F1; color: #0F766E"
     };
     var catLabels = Model.Categories.ToDictionary(c => c.Category, c => c.Label);
+    int progressPct = Model.Status.IsSubscriber ? Math.Clamp(Model.DaysRemaining * 100 / 30, 0, 100) : 0;
 }
 @section css {
 <link rel="stylesheet" href="~/css/desktop/base.css"><link rel="stylesheet" href="~/css/desktop/account.css">
 }
-<div dir="rtl" style="width: 100%; max-width: 760px; margin: 0 auto; min-height: 100vh; font-family: Vazirmatn, Tahoma, sans-serif; color: #111827; background: #F6F8F8; display: flex; flex-direction: column">
-<main style="padding: 20px 16px; display: flex; flex-direction: column; gap: 14px; flex: 1">
-<h1 style="margin: 0; font-size: 22px; font-weight: 800">حساب کاربری</h1>
-<section class="zbox" aria-label="پروفایل" style="flex-direction: row; align-items: center">
-<span aria-hidden="true" style="width: 56px; height: 56px; border-radius: 50%; background: #0F766E; color: #FFFFFF; display: grid; place-items: center; font-weight: 800; font-size: 20px; flex: none">@initial</span>
-<div style="flex: 1; display: flex; flex-direction: column; gap: 2px"><b>@Model.FullName</b><span dir="ltr" style="color: #6B7280; font-size: 13px; text-align: right">@ViewFormat.Digits(Model.Mobile) · @Model.CityName</span></div>
-<a href="/login/profile" style="min-height: 44px; display: flex; align-items: center; font-weight: 700; font-size: 14px">ویرایش</a>
+<div dir="rtl" style="font-family: Vazirmatn, Tahoma, sans-serif; color: #111827; background: #F6F8F8; min-height: 100vh">
+<header style="position: sticky; top: 0; z-index: 20; background: rgba(255,255,255,.94); border-bottom: 1px solid #EEF0F2">
+<div style="max-width: 1240px; margin: 0 auto; padding: 0 32px; min-height: 72px; display: flex; align-items: center; gap: 36px">
+<a href="/" style="display: flex; align-items: center; gap: 10px; color: #111827"><svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="10" fill="#0F766E"></rect><circle cx="18" cy="18" r="8.5" fill="none" stroke="#fff" stroke-width="3"></circle><circle cx="18" cy="18" r="3" fill="#D4A017"></circle></svg><b style="font-size: 22px">شکار</b></a>
+<nav aria-label="منوی اصلی" style="display: flex; gap: 28px; flex: 1"><a href="/hunts" style="color: #374151; font-weight: 500">شکارها</a><a href="/appraise" style="color: #374151; font-weight: 500">کارشناسی قیمت</a><a href="/plans" style="color: #374151; font-weight: 500">پلن‌ها</a><a href="/contact" style="color: #374151; font-weight: 500">تماس با ما</a></nav>
+<span aria-hidden="true" style="width: 44px; height: 44px; border-radius: 50%; background: #0F766E; color: #FFFFFF; display: grid; place-items: center; font-weight: 700">@initial</span>
+</div>
+</header>
+
+<div style="max-width: 1280px; margin: 0 auto; padding: 32px 24px 80px; display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start">
+<nav aria-label="حساب" style="flex: 1 1 240px; max-width: 280px; background: #FFFFFF; border-radius: 20px; padding: 12px; display: flex; flex-direction: column; gap: 4px">
+<a href="#pf" class="zside zside-on">پروفایل</a>
+<a href="#pl" class="zside">پلن و اشتراک</a>
+<a href="#al" class="zside">هشدارهای «خبرم کن»</a>
+<a href="#hs" class="zside">کارشناسی‌ها</a>
+<a href="/contact" class="zside">تماس با ما</a>
+<form method="post" action="/logout" style="margin: 0"><button type="submit" class="zside" style="width: 100%; background: none; border: 0; cursor: pointer; font-family: inherit; font-size: inherit; color: #DC2626; text-align: right">خروج از حساب</button></form>
+</nav>
+
+<main style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px">
+<h1 style="margin: 0; font-size: 28px; font-weight: 800">حساب کاربری</h1>
+
+<section id="pf" class="zbox" aria-labelledby="h1">
+<div style="display: flex; justify-content: space-between; align-items: center"><h2 id="h1" style="margin: 0; font-size: 18px">پروفایل</h2><a href="/login/profile" class="zbtn zbtn-s" style="min-height: 40px">ویرایش</a></div>
+<dl style="margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px">
+<div><dt style="color: #6B7280; font-size: 13px">نام و نام خانوادگی</dt><dd style="margin: 4px 0 0; font-weight: 700">@Model.FullName</dd></div>
+<div><dt style="color: #6B7280; font-size: 13px">شماره موبایل</dt><dd dir="ltr" style="margin: 4px 0 0; font-weight: 700; text-align: right">@ViewFormat.Digits(Model.Mobile)</dd></div>
+<div><dt style="color: #6B7280; font-size: 13px">شهر</dt><dd style="margin: 4px 0 0; font-weight: 700">@Model.CityName</dd></div>
+</dl>
 </section>
 
-<section class="zbox" style="border: 2px solid #0F766E">
-<h2 style="margin: 0; font-size: 16px">پلن فعلی</h2>
-<div style="display: flex; flex-direction: column; gap: 12px">
-<div><b style="font-size: 18px">@planLabel</b>
+<section id="pl" class="zbox" aria-labelledby="h2" style="border: 2px solid #0F766E">
+<h2 id="h2" style="margin: 0; font-size: 18px">پلن فعلی</h2>
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<b style="font-size: 22px">@planLabel</b>
 @if (Model.Status.IsSubscriber)
 {
-    <div style="color: #6B7280; font-size: 13px; margin-top: 4px">اعتبار تا @Model.ExpiresLabel · <b style="color: #DC2626">@ViewFormat.Digits(Model.DaysRemaining.ToString()) روز مانده</b></div>
+    <span style="color: #6B7280">اعتبار تا @Model.ExpiresLabel · <b style="color: #DC2626">@ViewFormat.Digits(Model.DaysRemaining.ToString()) روز مانده</b></span>
 }
 </div>
-<div style="display: flex; gap: 10px"><a href="/plans" class="zbtn zbtn-p">تمدید</a></div>
+<div style="display: flex; gap: 10px; flex-wrap: wrap"><a href="/plans" class="zbtn zbtn-p">تمدید</a></div>
 </div>
+<div style="height: 8px; background: #E6F4F1; border-radius: 8px; overflow: hidden"><div style="width: @(progressPct)%; height: 100%; background: #0F766E"></div></div>
 </section>
 
-<section class="zbox">
-<h2 style="margin: 0; font-size: 16px">هشدارهای «خبرم کن»</h2>
-<p style="margin: 0; font-size: 13px; color: #374151; background: #E6F4F1; border-radius: 12px; padding: 10px 12px; line-height: 1.8">هر زنگوله‌ای که روشن کنی، تا ۲۴ ساعت شکارهای تازه‌ش رو پیامک می‌کنیم؛ بعدش خودش خاموش می‌شه.</p>
-<div style="display: flex; flex-direction: column">
+<section id="al" class="zbox" aria-labelledby="h3">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap"><h2 id="h3" style="margin: 0; font-size: 18px">هشدارهای «خبرم کن»</h2><span style="font-size: 13px; color: #6B7280">پیامک به @ViewFormat.Digits(Model.Mobile)</span></div>
+<p style="margin: 0; font-size: 14px; color: #374151; background: #E6F4F1; border-radius: 12px; padding: 12px 14px">هر زنگوله‌ای که روشن کنی، تا ۲۴ ساعت شکارهای تازه‌ی اون دسته رو پیامک می‌کنیم؛ بعدش خودش خاموش می‌شه.</p>
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px">
+@{int bi = 0;}
 @foreach (var bell in Model.Bells)
 {
-    <div style="display: flex; justify-content: space-between; align-items: center; min-height: 52px; border-bottom: 1px solid #EEF0F2">
+    var lid = $"al{bi++}";
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border: 1px solid #E5E7EB; border-radius: 12px">
     <span style="display: flex; flex-direction: column; gap: 2px">
-    <span style="font-size: 15px">@catLabels.GetValueOrDefault(bell.Category, bell.Category.ToString())</span>
+    <span id="@lid">@catLabels.GetValueOrDefault(bell.Category, bell.Category.ToString())</span>
     @if (bell.IsOn)
     {
         <span style="font-size: 12px; color: #0F766E">فعال · @bell.RemainingLabel</span>
@@ -58,24 +85,25 @@
     <form method="post" action="/bells/toggle" style="margin: 0">
     <input type="hidden" name="category" value="@bell.Category" />
     <input type="hidden" name="returnUrl" value="/account" />
-    <button role="switch" aria-checked="@(bell.IsOn ? "true" : "false")" class="zsw@(bell.IsOn ? " zsw-on" : "")" type="submit"></button>
+    <button role="switch" aria-checked="@(bell.IsOn ? "true" : "false")" aria-labelledby="@lid" class="zsw@(bell.IsOn ? " zsw-on" : "")" type="submit"></button>
     </form>
     </div>
 }
 </div>
 </section>
 
-<section class="zbox">
-<div style="display: flex; justify-content: space-between; align-items: center"><h2 style="margin: 0; font-size: 16px">کارشناسی‌ها</h2><span style="background: #E6F4F1; color: #0F766E; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 999px">@(Model.Status.IsSubscriber ? "نامحدود" : "ماهی ۳ رایگان")</span></div>
-<ul style="list-style: none; margin: 0; padding: 0">
+<section id="hs" class="zbox" aria-labelledby="h4">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap"><h2 id="h4" style="margin: 0; font-size: 18px">کارشناسی‌ها</h2><span style="background: #E6F4F1; color: #0F766E; font-weight: 700; font-size: 13px; padding: 6px 12px; border-radius: 999px">@(Model.Status.IsSubscriber ? "کارشناسی نامحدود" : "ماهی ۳ رایگان")</span></div>
+<ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column">
 @foreach (var a in Model.Appraisals)
 {
-    <li style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #EEF0F2"><div><b style="display: block; font-size: 14px">@a.Title</b><span style="font-size: 12px; color: #6B7280">@a.DateLabel · امتیاز @ViewFormat.Digits(a.Score.ToString())</span></div><span style="font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; @verdictStyle(a.Verdict)">@a.Verdict</span></li>
+    <li style="display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 0; border-bottom: 1px solid #EEF0F2; flex-wrap: wrap">
+    <div style="display: flex; flex-direction: column; gap: 2px"><b>@a.Title</b><span style="font-size: 13px; color: #6B7280">@a.DateLabel</span></div>
+    <div style="display: flex; gap: 10px; align-items: center"><b>امتیاز @ViewFormat.Digits(a.Score.ToString())</b><span style="font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; @verdictStyle(a.Verdict)">@a.Verdict</span></div>
+    </li>
 }
 </ul>
 </section>
-
-<a href="/contact" style="background: #FFFFFF; border-radius: 14px; min-height: 52px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; color: #111827; font-weight: 600">تماس با ما<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" stroke-width="2" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg></a>
-<form method="post" action="/logout" style="margin: 0"><button type="submit" style="width: 100%; border: 0; cursor: pointer; background: #FFFFFF; border-radius: 14px; min-height: 52px; display: flex; align-items: center; justify-content: center; gap: 8px; color: #DC2626; font-weight: 700; font-family: inherit"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"></path></svg>خروج از حساب</button></form>
 </main>
+</div>
 </div>
