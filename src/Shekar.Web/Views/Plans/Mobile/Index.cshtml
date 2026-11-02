@@ -38,10 +38,6 @@
 <span style="display: inline-flex; align-items: center; gap: 4px; background: #E6F4F1; color: #0F766E; font-weight: 700; font-size: 12px; padding: 3px 9px; border-radius: 999px; white-space: nowrap"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"></path><circle cx="12" cy="9.5" r="2.5"></circle></svg>@cap.CityName</span>
 </div>
 
-<div style="display: flex; align-items: center; gap: 10px; background: #FBF6E6; border: 1px solid #F1DFA6; border-radius: 14px; padding: 10px 12px; color: #3F3305; font-size: 13px; line-height: 1.7">
-<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#8A6A0B" stroke-width="2" stroke-linejoin="round" aria-hidden="true" style="flex: none"><rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M3 12h18M12 8v13M12 8c-2-4-6-4-6-1.5S9 8 12 8zM12 8c2-4 6-4 6-1.5S15 8 12 8z"></path></svg>
-<span><b>۲۴ ساعت اول مهمون ما!</b> پلن شکارچی رو رایگان امتحان کن. پلن حرفه‌ای مستقیم قابل خریده.</span>
-</div>
 </section>
 
 @if (TempData["PlansMsg"] is string msg)
@@ -53,7 +49,7 @@
 <div role="radiogroup" aria-label="انتخاب پلن" style="display: flex; flex-direction: column; gap: 14px; padding-top: 6px">
 
 @* ── شکارچی حرفه‌ای (پیشنهادی) ── *@
-<button role="radio" aria-checked="true" class="zpl zpl-on">
+<button role="radio" aria-checked="true" class="zpl zpl-on" data-plan="pro">
 <span style="position: absolute; top: -12px; right: 18px; background: #0F766E; color: #FFFFFF; font-size: 12px; font-weight: 700; padding: 3px 12px; border-radius: 999px">پیشنهاد ما</span>
 <span style="display: flex; align-items: center; gap: 10px; width: 100%"><span class="zrad zrad-on"></span><span style="flex: 1; display: flex; flex-direction: column"><b style="font-size: 18px">@pro.Name</b><span style="font-size: 12px; color: #6B7280">همه‌چیز + اولویت دریافت + اعلان سریع‌تر</span></span></span>
 <span style="display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap"><b style="font-size: 30px; letter-spacing: -.5px">@ViewFormat.Number(pro.MonthlyPriceToman)</b><span style="color: #6B7280; font-size: 13px">تومان / ماه</span></span>
@@ -77,7 +73,7 @@
 </button>
 
 @* ── شکارچی ── *@
-<button role="radio" aria-checked="false" class="zpl">
+<button role="radio" aria-checked="false" class="zpl" data-plan="hunter">
 <span style="display: flex; align-items: center; gap: 10px; width: 100%"><span class="zrad"></span><span style="flex: 1; display: flex; flex-direction: column"><b style="font-size: 18px">@hunter.Name</b><span style="font-size: 12px; color: #6B7280">برای شروع کافیه</span></span></span>
 <span style="display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap"><b style="font-size: 30px; letter-spacing: -.5px">@ViewFormat.Number(hunter.MonthlyPriceToman)</b><span style="color: #6B7280; font-size: 13px">تومان / ماه</span></span>
 <span style="height: 1px; background: #EEF0F2; width: 100%"></span>
@@ -97,6 +93,7 @@
 </span>
 }
 </span>
+<span style="display: inline-flex; align-items: center; gap: 6px; background: #FBF6E6; border: 1px solid #F1DFA6; color: #3F3305; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 999px; align-self: flex-start"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#8A6A0B" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="8" width="18" height="13" rx="2"></rect><path d="M3 12h18M12 8v13M12 8c-2-4-6-4-6-1.5S9 8 12 8zM12 8c2-4 6-4 6-1.5S15 8 12 8z"></path></svg>۲۴ ساعت اول رایگانه!</span>
 </button>
 
 </div>
@@ -124,10 +121,29 @@
 
 @* ── دکمه sticky پایین ── *@
 <div style="position: fixed; bottom: 0; left: 0; right: 0; z-index: 10; background: #FFFFFF; border-top: 1px solid #EEF0F2; padding: 12px 16px 20px; box-shadow: 0 -8px 24px rgba(17,24,39,.06)">
-<div style="max-width: 480px; margin: 0 auto; display: flex; align-items: center; gap: 12px">
+<div id="sticky-pro" style="max-width: 480px; margin: 0 auto; display: flex; align-items: center; gap: 12px">
 <div style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 12px; color: #0F766E; font-weight: 700">پلن حرفه‌ای</span><b style="font-size: 16px; white-space: nowrap">@ViewFormat.Number(pro.MonthlyPriceToman) <span style="font-size: 12px; font-weight: 500; color: #6B7280">تومان / ماه</span></b></div>
 <form method="post" action="/plans/subscribe" style="margin: 0; flex: none"><input type="hidden" name="plan" value="HunterPro"><button type="submit" class="zbtn zbtn-p" style="@btn; padding: 0 24px">خرید پلن حرفه‌ای</button></form>
 </div>
+<div id="sticky-hunter" style="max-width: 480px; margin: 0 auto; display: none; align-items: center; gap: 12px">
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column"><span style="font-size: 12px; color: #0F766E; font-weight: 700">پلن شکارچی</span><b style="font-size: 16px; white-space: nowrap">@ViewFormat.Number(hunter.MonthlyPriceToman) <span style="font-size: 12px; font-weight: 500; color: #6B7280">تومان / ماه</span></b></div>
+<form method="post" action="/plans/trial" style="margin: 0; flex: none"><button type="submit" class="zbtn zbtn-p" style="@btn; padding: 0 18px; font-size: 13px">۲۴ ساعت رایگان امتحان کن</button></form>
+</div>
 </div>
 
+@section scripts {
+<script>
+(function(){
+var cards=document.querySelectorAll('.zpl');
+var sPro=document.getElementById('sticky-pro');
+var sHunter=document.getElementById('sticky-hunter');
+function select(plan){
+cards.forEach(function(c){var p=c.dataset.plan;c.setAttribute('aria-checked',p===plan?'true':'false');c.classList.toggle('zpl-on',p===plan);});
+if(sPro){sPro.style.display=plan==='pro'?'flex':'none';}
+if(sHunter){sHunter.style.display=plan==='hunter'?'flex':'none';}
+}
+cards.forEach(function(c){c.addEventListener('click',function(e){e.preventDefault();select(c.dataset.plan);});});
+})();
+</script>
+}
 </div>

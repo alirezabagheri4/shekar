@@ -36,7 +36,7 @@
 </div>
 @section scripts {
 <script>
-(function(){var b=document.querySelectorAll('.zotp');b.forEach(function(el,i){el.addEventListener('input',function(){if(el.value.length>=1&&i<b.length-1)b[i+1].focus();});el.addEventListener('keydown',function(e){if(e.key==='Backspace'&&!el.value&&i>0)b[i-1].focus();});});b[0].focus();})();
+(function(){var norm=function(s){return s.replace(/[۰-۹]/g,function(c){return c.charCodeAt(0)-0x06F0;}).replace(/[٠-٩]/g,function(c){return c.charCodeAt(0)-0x0660;});};var b=document.querySelectorAll('.zotp');var form=b.length&&b[0].form;b.forEach(function(el,i){el.addEventListener('input',function(){el.value=norm(el.value);if(el.value.length>=1){if(i<b.length-1){b[i+1].focus();}else{var ok=Array.from(b).every(function(x){return x.value.length===1;});if(ok&&form){form.requestSubmit?form.requestSubmit():form.submit();}}}});el.addEventListener('keydown',function(e){if(e.key==='Backspace'&&!el.value&&i>0)b[i-1].focus();});});if(b[0])b[0].focus();})();
 </script>
 }
 
