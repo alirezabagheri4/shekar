@@ -18,6 +18,7 @@ public static class DependencyInjection
         services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<ISupportService, SupportService>();
+        services.AddScoped<IPaymentService, PaymentService>();
 
         services.AddPipelineServices();
         return services;

@@ -23,4 +23,16 @@ public static class ErrorCodes
 
     /// <summary>R7 — آگهی حذف شده.</summary>
     public const string HuntRemoved = "hunt_removed";
+
+    /// <summary>شماره‌ی کاربر بلاک شده (نمی‌تواند وارد شود، OTP بگیرد یا پرداخت ثبت کند).</summary>
+    public const string AccountBlocked = "account_blocked";
+
+    /// <summary>کاربر هم‌اکنون یک پرداخت در انتظار بررسی دارد.</summary>
+    public const string PaymentPending = "payment_pending";
+
+    /// <summary>رسید نامعتبر (فرمت/حجم فایل یا متن کوتاه).</summary>
+    public const string InvalidReceipt = "invalid_receipt";
+
+    /// <summary>دسترسی ادمین لازم است.</summary>
+    public const string AdminOnly = "admin_only";
 }

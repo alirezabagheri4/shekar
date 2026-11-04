@@ -227,10 +227,41 @@ CREATE TABLE dbo.BlockedAdvertisers (
     IsActive        BIT            NOT NULL CONSTRAINT DF_Blocked_Active DEFAULT(1), -- آیا بلاک فعال است
     CONSTRAINT PK_BlockedAdvertisers PRIMARY KEY (Id),
     CONSTRAINT FK_Blocked_Users FOREIGN KEY (BlockedByUserId) REFERENCES dbo.Users(Id) ON DELETE SET NULL,
-    CONSTRAINT CK_Blocked_Reason CHECK (Reason BETWEEN 1 AND 6)
+    CONSTRAINT CK_Blocked_Reason CHECK (Reason BETWEEN 1 AND 7)   -- 7=رسید جعلی
 );
 -- تشخیص سریع بلاک فعالِ یک شماره (هنگام ساخت لیست روزانه):
 CREATE INDEX IX_Blocked_Phone_Active ON dbo.BlockedAdvertisers(Phone, IsActive);
+GO
+
+/* ------------------------------------------------------------------ پرداخت‌های کارت‌به‌کارت
+   کاربر مبلغ پلن را واریز و رسید (عکس/متن) می‌فرستد؛ اشتراک فوری فعال و پرداخت «در انتظار بررسی»
+   می‌ماند تا ادمین تأیید یا به‌عنوان رسید جعلی رد کند. */
+CREATE TABLE dbo.Payments (
+    Id               INT            NOT NULL IDENTITY(1,1),         -- شناسه‌ی پرداخت
+    UserId           INT            NOT NULL,                       -- کاربر پرداخت‌کننده
+    Mobile           NVARCHAR(15)   NOT NULL,                       -- شماره موبایل کاربر در لحظه‌ی پرداخت (مبنای بلاک)
+    PlanType         TINYINT        NOT NULL,                       -- پلن: 1=شکارچی،2=حرفه‌ای
+    CityId           INT            NOT NULL,                       -- شهر اشتراک (مبنای ظرفیت R1)
+    AmountToman      BIGINT         NOT NULL,                       -- مبلغ واریزی به تومان
+    Method           TINYINT        NOT NULL,                       -- روش رسید: 1=عکس،2=متن
+    ReceiptImageKey  NVARCHAR(200)  NULL,                           -- کلید فایل رسید (خارج از wwwroot عمومی)
+    ReceiptText      NVARCHAR(2000) NULL,                           -- متن رسید (روش متن)
+    Reference        NVARCHAR(32)   NOT NULL,                       -- کد پیگیری نمایشی، مثل SHK-482193
+    Ip               NVARCHAR(64)   NULL,                           -- IP ثبت‌کننده‌ی پرداخت
+    SubmittedAt      DATETIMEOFFSET NOT NULL,                       -- زمان ثبت پرداخت
+    [Status]         TINYINT        NOT NULL CONSTRAINT DF_Payments_Status DEFAULT(1), -- 1=در انتظار،2=تأیید،3=رد
+    SubscriptionId   INT            NULL,                           -- اشتراک فعال/تمدیدشده با این پرداخت
+    ReviewedAt       DATETIMEOFFSET NULL,                           -- زمان بررسی ادمین
+    ReviewedByUserId INT            NULL,                           -- ادمین بررسی‌کننده
+    ReviewNote       NVARCHAR(300)  NULL,                           -- توضیح بررسی (مثلاً دلیل رد)
+    CONSTRAINT PK_Payments PRIMARY KEY (Id),
+    CONSTRAINT FK_Payments_Users FOREIGN KEY (UserId) REFERENCES dbo.Users(Id) ON DELETE CASCADE,
+    CONSTRAINT CK_Payments_Method CHECK (Method IN (1,2)),
+    CONSTRAINT CK_Payments_Status CHECK ([Status] IN (1,2,3))
+);
+-- واکشی سریع پرداخت در انتظار هر کاربر و فهرست در انتظار بررسی:
+CREATE INDEX IX_Payments_User_Status ON dbo.Payments(UserId, [Status]);
+CREATE INDEX IX_Payments_Status      ON dbo.Payments([Status]);
 GO
 
 /* ------------------------------------------------------------------ تنظیمات/محدودیت‌های سراسری (کلید/مقدار) */
@@ -278,7 +309,10 @@ INSERT INTO dbo.SystemSettings ([Key], [Value], ValueType, [Description], Update
     (N'TransactionCostRate',        N'0.02',     N'decimal', N'R9 — نرخ هزینه‌ی نقل‌وانتقال نسبت به قیمت آگهی',       SYSDATETIMEOFFSET()),
     (N'SupportStartHour',           N'9',        N'int',     N'R12 — ساعت شروع پشتیبانی (Asia/Tehran)',               SYSDATETIMEOFFSET()),
     (N'SupportEndHour',             N'18',       N'int',     N'R12 — ساعت پایان پشتیبانی (Asia/Tehran)',              SYSDATETIMEOFFSET()),
-    (N'MaxAdsPerMonthBeforeReview', N'20',       N'int',     N'آستانه‌ی تعداد آگهی ماهانه برای بررسی دلال/اسپم',      SYSDATETIMEOFFSET());
+    (N'MaxAdsPerMonthBeforeReview', N'20',       N'int',     N'آستانه‌ی تعداد آگهی ماهانه برای بررسی دلال/اسپم',      SYSDATETIMEOFFSET()),
+    (N'CardTransfer.CardNumber',    N'6219861082608372', N'string', N'شماره کارت مقصد پرداخت کارت‌به‌کارت',           SYSDATETIMEOFFSET()),
+    (N'CardTransfer.HolderName',    N'علیرضا باقری',     N'string', N'نام صاحب کارت مقصد',                             SYSDATETIMEOFFSET()),
+    (N'CardTransfer.BankName',      N'بانک سامان',       N'string', N'نام بانک کارت مقصد',                             SYSDATETIMEOFFSET());
 GO
 
 /* =====================================================================================
@@ -297,6 +331,7 @@ EXEC sys.sp_addextendedproperty 'MS_Description', N'کارشناسی‌های ق
 EXEC sys.sp_addextendedproperty 'MS_Description', N'زنگوله‌های «خبرم کن» برای دسته‌های قیمتی (R6)',                'SCHEMA','dbo','TABLE','BellAlerts';
 EXEC sys.sp_addextendedproperty 'MS_Description', N'لیست انتظار شهرِ پرظرفیت (R1)',                                'SCHEMA','dbo','TABLE','WaitlistEntries';
 EXEC sys.sp_addextendedproperty 'MS_Description', N'کدهای یک‌بارمصرف ورود',                                        'SCHEMA','dbo','TABLE','OtpCodes';
+EXEC sys.sp_addextendedproperty 'MS_Description', N'پرداخت‌های کارت‌به‌کارت (منتظر تأیید/رد ادمین)',               'SCHEMA','dbo','TABLE','Payments';
 EXEC sys.sp_addextendedproperty 'MS_Description', N'آگهی‌دهنده‌ها و حجم آگهی‌گذاری‌شان',                           'SCHEMA','dbo','TABLE','Advertisers';
 EXEC sys.sp_addextendedproperty 'MS_Description', N'شماره‌های بلاک‌شده؛ از پیشنهادهای روزانه حذف می‌شوند',         'SCHEMA','dbo','TABLE','BlockedAdvertisers';
 EXEC sys.sp_addextendedproperty 'MS_Description', N'محدودیت‌ها و تنظیمات سراسری کسب‌وکار (کلید/مقدار)',            'SCHEMA','dbo','TABLE','SystemSettings';

@@ -15,24 +15,38 @@ public sealed class AuthService : IAuthService
     private readonly IOtpGenerator _otpGenerator;
     private readonly ISmsSender _sms;
     private readonly IClock _clock;
+    private readonly IBlockedAdvertiserRepository _blocked;
 
     public AuthService(
         IOtpRepository otps,
         IUserRepository users,
         IOtpGenerator otpGenerator,
         ISmsSender sms,
-        IClock clock)
+        IClock clock,
+        IBlockedAdvertiserRepository blocked)
     {
         _otps = otps;
         _users = users;
         _otpGenerator = otpGenerator;
         _sms = sms;
         _clock = clock;
+        _blocked = blocked;
     }
+
+    /// <summary>پیام محترمانه‌ی حساب مسدودشده با لینک پشتیبانی.</summary>
+    private const string BlockedMessage =
+        "حساب شما موقتاً مسدود شده. اگه فکر می‌کنی اشتباهیه، با پشتیبانی تماس بگیر: @shekarai";
 
     public async Task RequestOtpAsync(RequestOtpDto request, CancellationToken ct = default)
     {
         DateTimeOffset now = _clock.UtcNow;
+
+        // شماره‌ی بلاک‌شده نمی‌تواند کد ورود بگیرد.
+        if (await _blocked.IsBlockedAsync(request.Mobile, now, ct))
+        {
+            throw new ForbiddenException(ErrorCodes.AccountBlocked, BlockedMessage);
+        }
+
         string code = _otpGenerator.Generate();
 
         await _otps.AddAsync(new OtpCode
@@ -49,8 +63,15 @@ public sealed class AuthService : IAuthService
 
     public async Task<AuthResultDto> VerifyOtpAsync(VerifyOtpDto request, CancellationToken ct = default)
     {
-        OtpCode? otp = await _otps.GetLatestAsync(request.Mobile, ct);
         DateTimeOffset now = _clock.UtcNow;
+
+        // شماره‌ی بلاک‌شده نمی‌تواند وارد شود.
+        if (await _blocked.IsBlockedAsync(request.Mobile, now, ct))
+        {
+            throw new ForbiddenException(ErrorCodes.AccountBlocked, BlockedMessage);
+        }
+
+        OtpCode? otp = await _otps.GetLatestAsync(request.Mobile, ct);
 
         if (otp is null || otp.Consumed || otp.ExpiresAt <= now || otp.Code != request.Code)
         {

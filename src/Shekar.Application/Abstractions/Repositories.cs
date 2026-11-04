@@ -38,7 +38,11 @@ public interface ISubscriptionRepository
     /// <summary>R1 — تعداد اشتراک‌های فعال (Trial + Active و منقضی‌نشده) یک شهر.</summary>
     Task<int> CountActiveInCityAsync(int cityId, DateTimeOffset now, CancellationToken ct = default);
 
+    Task<Subscription?> GetAsync(int id, CancellationToken ct = default);
+
     Task<Subscription> AddAsync(Subscription subscription, CancellationToken ct = default);
+
+    Task UpdateAsync(Subscription subscription, CancellationToken ct = default);
 }
 
 public interface IHuntRepository
@@ -104,8 +108,25 @@ public interface IBlockedAdvertiserRepository
     Task<IReadOnlyList<string>> ListActivePhonesAsync(DateTimeOffset now, CancellationToken ct = default);
 
     Task<IReadOnlyList<BlockedAdvertiser>> ListAsync(CancellationToken ct = default);
+    Task<BlockedAdvertiser?> GetAsync(int id, CancellationToken ct = default);
     Task<BlockedAdvertiser> AddAsync(BlockedAdvertiser entry, CancellationToken ct = default);
     Task UpdateAsync(BlockedAdvertiser entry, CancellationToken ct = default);
+}
+
+/// <summary>پرداخت‌های کارت‌به‌کارت.</summary>
+public interface IPaymentRepository
+{
+    Task<Payment?> GetAsync(int id, CancellationToken ct = default);
+
+    /// <summary>پرداخت «در انتظار بررسی» کاربر (هر کاربر حداکثر یکی)؛ در صورت نبود <c>null</c>.</summary>
+    Task<Payment?> GetPendingForUserAsync(int userId, CancellationToken ct = default);
+
+    /// <summary>فهرست پرداخت‌های در انتظار بررسی (قدیمی‌ترین اول).</summary>
+    Task<IReadOnlyList<Payment>> ListPendingAsync(CancellationToken ct = default);
+
+    Task<Payment> AddAsync(Payment payment, CancellationToken ct = default);
+
+    Task UpdateAsync(Payment payment, CancellationToken ct = default);
 }
 
 public interface IPlanLimitRepository

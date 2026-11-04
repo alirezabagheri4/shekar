@@ -23,6 +23,9 @@ public sealed class MockSubscriptionRepository : ISubscriptionRepository
             && (s.Status == SubscriptionStatus.Trial || s.Status == SubscriptionStatus.Active)
             && s.ExpiresAt > now));
 
+    public Task<Subscription?> GetAsync(int id, CancellationToken ct = default) =>
+        Task.FromResult(_store.Subscriptions.FirstOrDefault(s => s.Id == id));
+
     public Task<Subscription> AddAsync(Subscription subscription, CancellationToken ct = default)
     {
         lock (_store.Gate)
@@ -32,6 +35,9 @@ public sealed class MockSubscriptionRepository : ISubscriptionRepository
         }
         return Task.FromResult(subscription);
     }
+
+    // اشتراک‌ها روی اشیای درون‌حافظه نگه داشته می‌شوند؛ تغییر همان شیء کافی است.
+    public Task UpdateAsync(Subscription subscription, CancellationToken ct = default) => Task.CompletedTask;
 }
 
 public sealed class MockHuntRepository : IHuntRepository

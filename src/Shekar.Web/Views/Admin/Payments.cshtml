@@ -1,0 +1,123 @@
+@model AdminPaymentsViewModel
+@{
+    ViewData["Title"] = "بررسی پرداخت‌ها";
+    string card = "background: #fff; border: 1px solid #E5E7EB; border-radius: 16px; padding: 18px 20px";
+    string th = "text-align: right; font-size: 13px; color: #6B7280; font-weight: 700; padding: 10px 12px; border-bottom: 1px solid #EEF0F2; white-space: nowrap";
+    string td = "font-size: 14px; padding: 12px; border-bottom: 1px solid #F6F8F8; vertical-align: top";
+    string btn = "border: 0; cursor: pointer; font-family: inherit; font-weight: 700; border-radius: 10px; padding: 8px 14px; font-size: 13px";
+}
+@section css {
+<link rel="stylesheet" href="~/css/desktop/base.css">
+}
+<div dir="rtl" style="font-family: Vazirmatn, Tahoma, sans-serif; color: #111827; background: #F6F8F8; min-height: 100vh">
+<header style="background: #fff; border-bottom: 1px solid #EEF0F2">
+<div style="max-width: 1100px; margin: 0 auto; padding: 0 24px; min-height: 64px; display: flex; align-items: center; gap: 12px">
+<a href="/" style="display: flex; align-items: center; gap: 8px; color: #111827"><svg width="30" height="30" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="10" fill="#0F766E"></rect><circle cx="18" cy="18" r="8.5" fill="none" stroke="#fff" stroke-width="3"></circle><circle cx="18" cy="18" r="3" fill="#D4A017"></circle></svg><b style="font-size: 18px">شکار</b></a>
+<span style="color: #6B7280; font-size: 14px">· پنل ادمین</span>
+</div>
+</header>
+<main style="max-width: 1100px; margin: 0 auto; padding: 28px 24px 64px; display: flex; flex-direction: column; gap: 24px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 800">بررسی پرداخت‌های کارت‌به‌کارت</h1>
+
+@if (TempData["AdminMsg"] is string msg)
+{
+<div style="background: #E6F4F1; color: #0F766E; border-radius: 12px; padding: 12px 16px; font-size: 14px">@msg</div>
+}
+
+<section style="@card">
+<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px">
+<b style="font-size: 17px">در انتظار بررسی</b>
+<span style="background: #FEF3C7; color: #92400E; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px">@ViewFormat.Digits(Model.Pending.Count.ToString()) مورد</span>
+</div>
+@if (Model.Pending.Count == 0)
+{
+<p style="color: #6B7280; font-size: 14px; margin: 8px 0">فعلاً پرداخت در انتظار بررسی‌ای نیست.</p>
+}
+else
+{
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; min-width: 720px">
+<thead><tr>
+<th style="@th">کد پیگیری</th><th style="@th">کاربر</th><th style="@th">موبایل</th><th style="@th">پلن</th><th style="@th">مبلغ</th><th style="@th">زمان</th><th style="@th">رسید</th><th style="@th">IP</th><th style="@th">عملیات</th>
+</tr></thead>
+<tbody>
+@foreach (var p in Model.Pending)
+{
+<tr>
+<td style="@td" dir="ltr">@p.Reference</td>
+<td style="@td">@p.FullName</td>
+<td style="@td" dir="ltr">@ViewFormat.Digits(p.Mobile)</td>
+<td style="@td">@p.PlanName</td>
+<td style="@td; white-space: nowrap">@p.AmountLabel تومان</td>
+<td style="@td; white-space: nowrap">@p.SubmittedAtLabel</td>
+<td style="@td">
+@if (p.Method == PaymentReceiptMethod.Image && p.HasImage)
+{
+<a href="/admin/payments/@p.Id/receipt" target="_blank" rel="noopener" style="color: #0F766E; font-weight: 700">دیدن عکس رسید ↗</a>
+}
+else
+{
+<details><summary style="cursor: pointer; color: #0F766E; font-weight: 700">متن رسید</summary><div style="margin-top: 6px; white-space: pre-wrap; font-size: 13px; color: #374151; max-width: 320px">@p.ReceiptText</div></details>
+}
+</td>
+<td style="@td" dir="ltr">@(string.IsNullOrEmpty(p.Ip) ? "—" : p.Ip)</td>
+<td style="@td">
+<div style="display: flex; gap: 8px">
+<form method="post" asp-controller="Admin" asp-action="Approve" asp-route-id="@p.Id" style="margin: 0"><button type="submit" style="@btn; background: #0F766E; color: #fff">تأیید</button></form>
+<form method="post" asp-controller="Admin" asp-action="Reject" asp-route-id="@p.Id" style="margin: 0" onsubmit="return confirm('با رد این پرداخت، اشتراک کاربر غیرفعال و شماره‌اش بلاک می‌شود. مطمئنی؟');"><button type="submit" style="@btn; background: #FEE2E2; color: #DC2626">رسید جعلی</button></form>
+</div>
+</td>
+</tr>
+}
+</tbody>
+</table>
+</div>
+}
+</section>
+
+<section style="@card">
+<b style="font-size: 17px; display: block; margin-bottom: 12px">شماره‌های بلاک‌شده</b>
+@if (Model.Blocked.Count == 0)
+{
+<p style="color: #6B7280; font-size: 14px; margin: 8px 0">شماره‌ی بلاک‌شده‌ای نیست.</p>
+}
+else
+{
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; min-width: 560px">
+<thead><tr>
+<th style="@th">موبایل</th><th style="@th">دلیل</th><th style="@th">توضیح</th><th style="@th">زمان</th><th style="@th">وضعیت</th><th style="@th">عملیات</th>
+</tr></thead>
+<tbody>
+@foreach (var b in Model.Blocked)
+{
+<tr>
+<td style="@td" dir="ltr">@ViewFormat.Digits(b.Phone)</td>
+<td style="@td">@b.ReasonLabel</td>
+<td style="@td; max-width: 260px">@(string.IsNullOrEmpty(b.Note) ? "—" : b.Note)</td>
+<td style="@td; white-space: nowrap">@b.BlockedAtLabel</td>
+<td style="@td">
+@if (b.IsActive)
+{
+<span style="color: #DC2626; font-weight: 700">فعال</span>
+}
+else
+{
+<span style="color: #6B7280">رفع‌شده</span>
+}
+</td>
+<td style="@td">
+@if (b.IsActive)
+{
+<form method="post" asp-controller="Admin" asp-action="Unblock" asp-route-id="@b.Id" style="margin: 0"><button type="submit" style="@btn; background: #E6F4F1; color: #0F766E">رفع بلاک</button></form>
+}
+</td>
+</tr>
+}
+</tbody>
+</table>
+</div>
+}
+</section>
+</main>
+</div>

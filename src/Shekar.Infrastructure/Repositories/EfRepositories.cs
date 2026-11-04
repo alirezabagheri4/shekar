@@ -76,11 +76,20 @@ public sealed class EfSubscriptionRepository : ISubscriptionRepository
             && (s.Status == SubscriptionStatus.Trial || s.Status == SubscriptionStatus.Active)
             && s.ExpiresAt > now, ct);
 
+    public Task<Subscription?> GetAsync(int id, CancellationToken ct = default) =>
+        _db.Subscriptions.FirstOrDefaultAsync(s => s.Id == id, ct);
+
     public async Task<Subscription> AddAsync(Subscription subscription, CancellationToken ct = default)
     {
         _db.Subscriptions.Add(subscription);
         await _db.SaveChangesAsync(ct);
         return subscription;
+    }
+
+    public async Task UpdateAsync(Subscription subscription, CancellationToken ct = default)
+    {
+        _db.Subscriptions.Update(subscription);
+        await _db.SaveChangesAsync(ct);
     }
 }
 
@@ -293,6 +302,9 @@ public sealed class EfBlockedAdvertiserRepository : IBlockedAdvertiserRepository
     public async Task<IReadOnlyList<BlockedAdvertiser>> ListAsync(CancellationToken ct = default) =>
         await _db.BlockedAdvertisers.AsNoTracking().OrderByDescending(x => x.BlockedAt).ToListAsync(ct);
 
+    public Task<BlockedAdvertiser?> GetAsync(int id, CancellationToken ct = default) =>
+        _db.BlockedAdvertisers.FirstOrDefaultAsync(x => x.Id == id, ct);
+
     public async Task<BlockedAdvertiser> AddAsync(BlockedAdvertiser entry, CancellationToken ct = default)
     {
         _db.BlockedAdvertisers.Add(entry);
@@ -409,6 +421,38 @@ public sealed class EfCrawlRunRepository : ICrawlRunRepository
     public async Task UpdateAsync(CrawlRun run, CancellationToken ct = default)
     {
         _db.CrawlRuns.Update(run);
+        await _db.SaveChangesAsync(ct);
+    }
+}
+
+public sealed class EfPaymentRepository : IPaymentRepository
+{
+    private readonly ShekarDbContext _db;
+    public EfPaymentRepository(ShekarDbContext db) => _db = db;
+
+    public Task<Payment?> GetAsync(int id, CancellationToken ct = default) =>
+        _db.Payments.FirstOrDefaultAsync(p => p.Id == id, ct);
+
+    public Task<Payment?> GetPendingForUserAsync(int userId, CancellationToken ct = default) =>
+        _db.Payments.FirstOrDefaultAsync(
+            p => p.UserId == userId && p.Status == PaymentReviewStatus.Pending, ct);
+
+    public async Task<IReadOnlyList<Payment>> ListPendingAsync(CancellationToken ct = default) =>
+        await _db.Payments.AsNoTracking()
+            .Where(p => p.Status == PaymentReviewStatus.Pending)
+            .OrderBy(p => p.SubmittedAt)
+            .ToListAsync(ct);
+
+    public async Task<Payment> AddAsync(Payment payment, CancellationToken ct = default)
+    {
+        _db.Payments.Add(payment);
+        await _db.SaveChangesAsync(ct);
+        return payment;
+    }
+
+    public async Task UpdateAsync(Payment payment, CancellationToken ct = default)
+    {
+        _db.Payments.Update(payment);
         await _db.SaveChangesAsync(ct);
     }
 }

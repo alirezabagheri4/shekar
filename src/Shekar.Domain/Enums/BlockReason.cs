@@ -19,5 +19,8 @@ public enum BlockReason
     Reported = 5,
 
     /// <summary>بلاک دستی توسط ادمین.</summary>
-    Manual = 6
+    Manual = 6,
+
+    /// <summary>رسید پرداخت جعلی (رد پرداخت کارت‌به‌کارت توسط ادمین).</summary>
+    FakeReceipt = 7
 }

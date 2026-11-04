@@ -460,18 +460,75 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("nvarchar(15)")
                         .HasComment("شماره آگهی‌دهنده؛ برای حذف شماره‌های بلاک‌شده از پیشنهادها");
 
+                    b.Property<string>("AiSummary")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)")
+                        .HasComment("خلاصه هوش مصنوعی");
+
+                    b.Property<long?>("BasePriceToman")
+                        .HasColumnType("bigint")
+                        .HasComment("قیمت پایه به تومان (قیمت صفر/کارخانه)");
+
                     b.Property<int>("BelowMarketPercent")
                         .HasColumnType("int")
                         .HasComment("درصد زیر بازار");
+
+                    b.Property<string>("BodyConditionText")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComment("وضعیت بدنه به متن");
+
+                    b.Property<string>("BrandModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasComment("برند و مدل، مثل «پژو ۲۰۷ پانوراما»");
+
+                    b.Property<string>("ChassisCondition")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasComment("وضعیت شاسی");
 
                     b.Property<int>("CityId")
                         .HasColumnType("int")
                         .HasComment("شهر آگهی");
 
+                    b.Property<string>("Color")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasComment("رنگ خودرو");
+
+                    b.Property<string>("EngineCondition")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasComment("وضعیت موتور");
+
+                    b.Property<string>("FuelType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasComment("نوع سوخت: بنزینی/دوگانه‌سوز/برقی/هیبرید");
+
+                    b.Property<string>("GearboxCondition")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)")
+                        .HasComment("وضعیت گیربکس");
+
+                    b.Property<string>("GearboxType")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasComment("نوع گیربکس: دنده‌ای/اتوماتیک");
+
+                    b.Property<int>("ImageCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد تصاویر آگهی");
+
                     b.Property<string>("ImageFileName")
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)")
                         .HasComment("نام فایل تصویر؛ NULL=placeholder");
+
+                    b.Property<int?>("InsuranceMonths")
+                        .HasColumnType("int")
+                        .HasComment("ماه‌های باقی‌مانده بیمه شخص ثالث");
 
                     b.Property<bool>("IsNew")
                         .HasColumnType("bit")
@@ -509,13 +566,36 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasComment("زمان انتشار آگهی");
 
+                    b.Property<int?>("ResellDaysMax")
+                        .HasColumnType("int")
+                        .HasComment("حداکثر روز برای فروش مجدد");
+
+                    b.Property<int?>("ResellDaysMin")
+                        .HasColumnType("int")
+                        .HasComment("حداقل روز برای فروش مجدد");
+
                     b.Property<int>("Score")
                         .HasColumnType("int")
                         .HasComment("امتیاز شکار ۰ تا ۱۰۰ (≥۸۵ فرصت طلایی — R8)");
 
+                    b.Property<string>("SellerDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)")
+                        .HasComment("توضیحات فروشنده");
+
+                    b.Property<string>("SellerName")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasComment("نام فروشنده");
+
                     b.Property<long?>("SourceListingId")
                         .HasColumnType("bigint")
                         .HasComment("آگهی خامِ منبعِ این شکار (خروجی اسکورینگ)؛ NULL برای seed/دستی");
+
+                    b.Property<string>("SourceUrl")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasComment("لینک آگهی منبع");
 
                     b.Property<byte>("State")
                         .HasColumnType("tinyint")
@@ -698,6 +778,97 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.ToTable("OtpCodes", (string)null);
 
                     b.HasComment("کدهای یک‌بارمصرف ورود");
+                });
+
+            modelBuilder.Entity("Shekar.Domain.Entities.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<long>("AmountToman")
+                        .HasColumnType("bigint")
+                        .HasComment("مبلغ واریزی به تومان");
+
+                    b.Property<int>("CityId")
+                        .HasColumnType("int")
+                        .HasComment("شهر اشتراک (مبنای ظرفیت R1)");
+
+                    b.Property<string>("Ip")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)")
+                        .HasComment("IP ثبت‌کننده‌ی پرداخت");
+
+                    b.Property<byte>("Method")
+                        .HasColumnType("tinyint")
+                        .HasComment("روش رسید: 1=عکس،2=متن");
+
+                    b.Property<string>("Mobile")
+                        .IsRequired()
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)")
+                        .HasComment("شماره موبایل کاربر در لحظه‌ی پرداخت (مبنای بلاک)");
+
+                    b.Property<byte>("PlanType")
+                        .HasColumnType("tinyint")
+                        .HasComment("پلن خریداری‌شده: 1=شکارچی،2=حرفه‌ای");
+
+                    b.Property<string>("ReceiptImageKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)")
+                        .HasComment("کلید فایل رسید (خارج از wwwroot عمومی)");
+
+                    b.Property<string>("ReceiptText")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)")
+                        .HasComment("متن رسید (روش متن)");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)")
+                        .HasComment("کد پیگیری نمایشی، مثل SHK-482193");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)")
+                        .HasComment("توضیح بررسی (مثلاً دلیل رد)");
+
+                    b.Property<DateTimeOffset?>("ReviewedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("زمان بررسی ادمین");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int")
+                        .HasComment("ادمین بررسی‌کننده");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasComment("وضعیت بررسی: 1=در انتظار،2=تأیید،3=رد");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("زمان ثبت پرداخت");
+
+                    b.Property<int?>("SubscriptionId")
+                        .HasColumnType("int")
+                        .HasComment("اشتراک فعال/تمدیدشده با این پرداخت (برای غیرفعال‌سازی هنگام رد)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int")
+                        .HasComment("کاربر پرداخت‌کننده");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("UserId", "Status");
+
+                    b.ToTable("Payments", (string)null);
+
+                    b.HasComment("پرداخت‌های کارت‌به‌کارت؛ اشتراک فوری فعال و منتظر تأیید/رد ادمین");
                 });
 
             modelBuilder.Entity("Shekar.Domain.Entities.Plan", b =>
@@ -1085,6 +1256,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                                 .HasMaxLength(20)
                                 .HasColumnType("nvarchar(20)")
                                 .HasComment("برچسب کیفی، مثل «عالی»");
+
+                            b1.Property<int>("Score")
+                                .HasColumnType("int")
+                                .HasComment("امتیاز عددی سنجه ۰ تا ۱۰۰");
 
                             b1.HasKey("Id");
 

@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Shekar.Application.Contracts;
+using Shekar.Application.Services;
 using Shekar.Web.Models;
 
 namespace Shekar.Web.Controllers;
@@ -7,9 +9,29 @@ namespace Shekar.Web.Controllers;
 [Authorize]
 public class PayController : Controller
 {
-    [HttpGet("/pay")]
-    public IActionResult Index() => View();
+    private readonly IPaymentService _payments;
 
+    public PayController(IPaymentService payments) => _payments = payments;
+
+    // صفحه‌ی پرداخت کارت‌به‌کارت (plan = pro|basic).
+    [HttpGet("/pay")]
+    public async Task<IActionResult> Index(string? plan, CancellationToken ct)
+    {
+        string selected = string.Equals(plan, "basic", StringComparison.OrdinalIgnoreCase) ? "basic" : "pro";
+        CardTransferInfoDto card = await _payments.GetCardInfoAsync(ct);
+        return View(new PayViewModel(card, selected));
+    }
+
+    // صفحه‌ی بررسی واریزی (۱۵ ثانیه نمایشی، سپس «اشتراکت فعال شد»).
+    [HttpGet("/pay/review")]
+    public async Task<IActionResult> Review(string? plan, string? @ref, CancellationToken ct)
+    {
+        string selected = string.Equals(plan, "basic", StringComparison.OrdinalIgnoreCase) ? "basic" : "pro";
+        string expires = await _payments.GetActiveExpiresLabelAsync(ct);
+        return View(new PayReviewViewModel(selected, @ref ?? string.Empty, expires));
+    }
+
+    // صفحه‌ی موفقیت اشتراک آزمایشی (R3) — جریان ترایل همچنان از این مسیر استفاده می‌کند.
     [HttpGet("/pay/success")]
     public IActionResult Success()
     {

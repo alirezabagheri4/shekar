@@ -1,21 +1,88 @@
+@model PayViewModel
 @{
-    ViewData["Title"] = "پرداخت";
+    ViewData["Title"] = "پرداخت کارت‌به‌کارت";
+    bool isPro = Model.Plan != "basic";
+    string planName = isPro ? "شکارچی حرفه‌ای" : "شکارچی";
+    string price = isPro ? "۱,۴۹۹,۰۰۰" : "۹۹۰,۰۰۰";
 }
 @section css {
-<link rel="stylesheet" href="~/css/desktop/base.css"><link rel="stylesheet" href="~/css/desktop/pay.css">
+<link rel="stylesheet" href="~/css/desktop/payment.css">
 }
-<div dir="rtl" style="font-family: Vazirmatn, Tahoma, sans-serif; color: #111827; background: #F6F8F8; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 40px 24px">
-<div style="width: 100%; max-width: 480px; background: #FFFFFF; border-radius: 24px; padding: 40px 36px; box-shadow: 0 16px 48px rgba(17,24,39,.06); display: flex; flex-direction: column; align-items: center; gap: 24px; text-align: center">
-
-<div style="width: 100%; display: flex; flex-direction: column; align-items: center; gap: 24px">
-<svg class="zspin" width="56" height="56" viewBox="0 0 56 56" aria-hidden="true"><circle cx="28" cy="28" r="24" fill="none" stroke="#E6F4F1" stroke-width="6"></circle><path d="M28 4a24 24 0 0124 24" fill="none" stroke="#0F766E" stroke-width="6" stroke-linecap="round"></path></svg>
-<div><h1 style="margin: 0 0 6px; font-size: 24px; font-weight: 800">داریم می‌ریم درگاه پرداخت…</h1><p style="margin: 0; color: #6B7280">چند ثانیه صبر کن و صفحه رو نبند.</p></div>
-<div style="width: 100%; height: 6px; background: #E6F4F1; border-radius: 8px; overflow: hidden"><div class="zbar" style="height: 100%; background: #0F766E"></div></div>
-<dl style="width: 100%; margin: 0; background: #F6F8F8; border-radius: 16px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; font-size: 15px">
-<div style="display: flex; justify-content: space-between"><dt style="color: #6B7280">پلن</dt><dd style="margin: 0; font-weight: 700">شکارچی حرفه‌ای · ماهانه</dd></div>
-<div style="display: flex; justify-content: space-between"><dt style="color: #6B7280">مبلغ</dt><dd style="margin: 0; font-weight: 800">۱,۴۹۹,۰۰۰ تومان</dd></div>
-</dl>
+<div style="min-height: 100vh; background: radial-gradient(900px 480px at 50% 0%, rgba(94,234,212,.12), transparent 65%), #F6F8F8">
+<header class="hdr"><div class="in">
+<a href="/" style="display: flex; align-items: center; gap: 10px; color: var(--ink)"><svg width="36" height="36" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="10" fill="#0F766E"></rect><circle cx="18" cy="18" r="8.5" fill="none" stroke="#fff" stroke-width="3"></circle><circle cx="18" cy="18" r="3" fill="#D4A017"></circle></svg><b style="font-size: 22px">شکار</b></a>
+<nav aria-label="منوی اصلی"><a href="/hunts">شکارها</a><a href="/appraise">کارشناسی قیمت</a><a href="/plans">پلن‌ها</a><a href="/contact">تماس با ما</a></nav>
+<a href="/account" aria-label="حساب کاربری" style="width: 44px; height: 44px; border-radius: 50%; background: var(--teal-50); display: grid; place-items: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0F766E" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"></path></svg></a>
+</div></header>
+<main class="wrap">
+<a href="/plans" style="align-self: flex-start; display: flex; align-items: center; gap: 6px; font-weight: 600; min-height: 36px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>برگشت به پلن‌ها</a>
+<div style="display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 8px"><h1 style="font-size: 34px; font-weight: 800">پرداخت اشتراک</h1><p class="muted" style="font-size: 16px">مبلغ رو کارت‌به‌کارت کن، رسیدش رو بفرست؛ بقیه‌ش با ما.</p></div>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap"><span class="step step-on"><i>۱</i>واریز کارت‌به‌کارت</span><span style="color: var(--line)">—</span><span class="step step-on"><i>۲</i>ارسال رسید</span><span style="color: var(--line)">—</span><span class="step"><i>۳</i>فعال‌سازی اشتراک</span></div>
 </div>
-
+<form class="cols" action="/api/payments/card-transfer" method="post" enctype="multipart/form-data" data-pay-form data-review-url="/pay/review" novalidate>
+<input type="hidden" name="plan" value="@Model.Plan" data-plan-input>
+<input type="hidden" name="method" value="image" data-method-input>
+<div style="display: flex; flex-direction: column; gap: 20px">
+<section class="box" aria-labelledby="cd" style="padding: 24px; display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; align-items: center; gap: 10px"><span class="step step-on"><i>۱</i></span><h2 id="cd" style="font-size: 19px; font-weight: 800">این مبلغ رو به این کارت واریز کن</h2></div>
+<div class="pay-card-grid">
+<div class="bank" style="padding: 26px 28px; display: flex; flex-direction: column; gap: 22px">
+<div style="position: relative; display: flex; justify-content: space-between; align-items: center"><span style="display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px"><svg width="26" height="26" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="10" fill="#0F766E"></rect><circle cx="18" cy="18" r="8.5" fill="none" stroke="#fff" stroke-width="3"></circle><circle cx="18" cy="18" r="3" fill="#D4A017"></circle></svg>حساب شکار</span><b style="font-size: 14px; color: #CDEBE5">@Model.Card.BankName</b></div>
+<div style="position: relative; display: flex; align-items: center; gap: 12px"><span class="chipg"></span><span style="font-size: 12px; color: #CDEBE5">شماره کارت مقصد</span></div>
+<b dir="ltr" style="position: relative; font-size: 23px; letter-spacing: 1.5px; text-align: center; font-weight: 800; white-space: nowrap">@Model.Card.CardNumberGrouped</b>
+<div style="position: relative; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px">
+<span style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 12px; color: #CDEBE5">به نام</span><b style="font-size: 17px; white-space: nowrap">@Model.Card.HolderName</b></span>
+<button type="button" class="cbtn cbtn-w" data-copy="@Model.Card.CardNumber" data-copy-msg="شماره کارت کپی شد" aria-label="کپی شماره کارت"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 011-1h10"></path></svg><span data-copy-label>کپی شماره کارت</span></button>
 </div>
 </div>
+<div style="display: flex; flex-direction: column; gap: 12px"><div class="box" style="padding: 18px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<span style="display: flex; flex-direction: column; gap: 2px"><span class="muted" style="font-size: 13px">مبلغ قابل واریز</span><b style="font-size: 26px"><span data-price>@price</span> <span class="muted" style="font-size: 14px; font-weight: 500">تومان</span></b></span>
+<button type="button" class="cbtn cbtn-t" data-copy-amount data-copy-msg="مبلغ کپی شد (به تومان)" aria-label="کپی مبلغ"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a1 1 0 011-1h10"></path></svg><span data-copy-label>کپی مبلغ</span></button>
+</div><div style="background: var(--gold-50); border: 1px solid #F1DFA6; border-radius: 16px; padding: 14px; font-size: 13px; line-height: 1.8; color: #3F3305; flex: 1"><b style="display: block; margin-bottom: 2px">از هر بانکی می‌تونی بزنی</b>با اپ بانک، همراه‌بانک یا خودپرداز؛ فقط بعدش رسید یا پیامک بانک رو نگه دار.</div></div>
+</div>
+</section>
+<section class="box" aria-labelledby="up" style="padding: 24px; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; gap: 10px"><span class="step step-on"><i>۲</i></span><h2 id="up" style="font-size: 19px; font-weight: 800">رسید واریز رو برامون بفرست</h2></div>
+<div class="tabs" role="tablist" aria-label="روش ارسال رسید">
+<button type="button" role="tab" class="tab tab-on" aria-selected="true" data-tab="image"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="2"></circle><path d="M21 16l-5-5-8 8"></path></svg>آپلود عکس رسید</button>
+<button type="button" role="tab" class="tab" aria-selected="false" data-tab="text"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8M12 4v16M8 20h8"></path></svg>چسباندن متن پیامک</button>
+</div>
+<div data-panel="image">
+<label class="drop" style="min-height: 178px" data-drop>
+<input type="file" name="receiptImage" accept="image/jpeg,image/png,image/webp" aria-label="انتخاب عکس رسید" data-file>
+<span style="width: 52px; height: 52px; border-radius: 16px; background: var(--teal-50); color: var(--teal); display: grid; place-items: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 16V4M7 9l5-5 5 5"></path><path d="M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"></path></svg></span>
+<b style="font-size: 15px">عکس یا اسکرین‌شات رسید رو اینجا بنداز</b>
+<span class="muted" style="font-size: 13px">یا بزن تا از گالری انتخاب کنی · JPG، PNG تا ۵ مگابایت</span>
+</label>
+<div data-file-card hidden style="display: flex; gap: 14px; align-items: center; border: 1.5px solid var(--teal); background: var(--teal-50); border-radius: 18px; padding: 12px">
+<span style="width: 72px; height: 72px; border-radius: 12px; overflow: hidden; background: #fff; flex: none; display: grid; place-items: center"><img data-file-preview alt="پیش‌نمایش رسید" style="width: 100%; height: 100%; object-fit: cover"></span>
+<span style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px"><b data-file-name dir="ltr" style="font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"></b><span style="font-size: 13px; color: var(--teal); display: flex; align-items: center; gap: 4px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>آماده‌ی ارسال</span></span>
+<button type="button" class="cbtn" style="background: #fff; color: var(--danger)" data-file-clear aria-label="حذف عکس"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button>
+</div>
+<p data-file-error class="zwarn" style="font-size: 13px" hidden></p>
+</div>
+<div data-panel="text" hidden style="display: flex; flex-direction: column; gap: 8px">
+<label for="receiptText" class="muted" style="font-size: 13px">متن پیامک بانک یا رسید اینترنتی رو کامل کپی کن و اینجا بچسبون</label>
+<textarea id="receiptText" name="receiptText" class="ta" rows="5" placeholder="مثلاً: انتقال وجه ۱,۴۹۹,۰۰۰ تومان به کارت ...۸۳۷۲ — شماره پیگیری ۴۸۲۱۹۳" data-text></textarea>
+<span class="muted" style="font-size: 12px" data-text-hint>مبلغ، تاریخ و شماره پیگیری باید تو متن باشه.</span>
+</div>
+<button type="submit" class="btn btn-p" style="width: 100%" data-submit disabled>ارسال رسید و فعال‌سازی</button>
+</section>
+</div>
+<aside style="display: flex; flex-direction: column; gap: 16px; position: sticky; top: 96px">
+<section class="box" aria-labelledby="sm" style="padding: 24px; display: flex; flex-direction: column; gap: 12px">
+<h2 id="sm" style="font-size: 17px; font-weight: 800">خلاصه‌ی خرید</h2>
+<div class="seg" role="group" aria-label="انتخاب پلن"><button type="button" class="segb @(isPro ? "segb-on" : "")" aria-pressed="@(isPro ? "true" : "false")" data-plan="pro">شکارچی حرفه‌ای</button><button type="button" class="segb @(isPro ? "" : "segb-on")" aria-pressed="@(isPro ? "false" : "true")" data-plan="basic">شکارچی</button></div>
+<div><div class="sumrow"><span class="muted">پلن</span><b data-plan-name>@planName</b></div><div class="sumrow"><span class="muted">مدت</span><b>یک ماه</b></div><div class="sumrow"><span class="muted">شهر</span><b>تهران</b></div><div class="sumrow" style="border: 0"><span class="muted">مبلغ</span><b style="font-size: 18px; color: var(--teal)"><span data-price>@price</span> تومان</b></div></div>
+</section>
+<div class="box" style="padding: 20px; display: flex; flex-direction: column; gap: 12px"><div class="note"><span style="color: var(--teal); flex: none; margin-top: 3px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 11v5M12 8h.01"></path></svg></span>دقیقاً همین مبلغ رو واریز کن تا سریع‌تر تأیید بشه.</div><div class="note"><span style="color: var(--teal); flex: none; margin-top: 3px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3 2"></path></svg></span>بررسی رسید معمولاً کمتر از یه دقیقه طول می‌کشه.</div><div class="note"><span style="color: var(--teal); flex: none; margin-top: 3px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"></path><path d="M9 12l2 2 4-4"></path></svg></span>اطلاعات کارت و رسیدت فقط برای تأیید پرداخت استفاده می‌شه.</div></div>
+<a href="/contact" class="box" style="padding: 14px 18px; display: flex; align-items: center; gap: 12px; color: var(--ink)"><span style="width: 40px; height: 40px; border-radius: 12px; background: var(--teal-50); color: var(--teal); display: grid; place-items: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z"></path></svg></span><span style="flex: 1; display: flex; flex-direction: column"><b style="font-size: 14px">سؤالی داری؟</b><span class="muted" style="font-size: 12px">پشتیبانی ۹ تا ۱۸ · @@shekarai</span></span><span style="color: var(--teal)">←</span></a>
+</aside>
+</form>
+</main>
+<div role="status" class="toast" data-toast hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5EEAD4" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg><span data-toast-text></span></div>
+</div>
+@section scripts {
+<script src="~/js/payment.js" defer></script>
+}

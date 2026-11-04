@@ -39,6 +39,34 @@ public sealed class BlockedAdvertiserConfiguration : IEntityTypeConfiguration<Bl
     }
 }
 
+public sealed class PaymentConfiguration : IEntityTypeConfiguration<Payment>
+{
+    public void Configure(EntityTypeBuilder<Payment> b)
+    {
+        b.ToTable("Payments").HasComment("پرداخت‌های کارت‌به‌کارت؛ اشتراک فوری فعال و منتظر تأیید/رد ادمین");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.UserId).HasComment("کاربر پرداخت‌کننده");
+        b.Property(x => x.Mobile).HasMaxLength(15).IsRequired().HasComment("شماره موبایل کاربر در لحظه‌ی پرداخت (مبنای بلاک)");
+        b.Property(x => x.PlanType).HasConversion<byte>().HasComment("پلن خریداری‌شده: 1=شکارچی،2=حرفه‌ای");
+        b.Property(x => x.CityId).HasComment("شهر اشتراک (مبنای ظرفیت R1)");
+        b.Property(x => x.AmountToman).HasComment("مبلغ واریزی به تومان");
+        b.Property(x => x.Method).HasConversion<byte>().HasComment("روش رسید: 1=عکس،2=متن");
+        b.Property(x => x.ReceiptImageKey).HasMaxLength(200).HasComment("کلید فایل رسید (خارج از wwwroot عمومی)");
+        b.Property(x => x.ReceiptText).HasMaxLength(2000).HasComment("متن رسید (روش متن)");
+        b.Property(x => x.Reference).HasMaxLength(32).IsRequired().HasComment("کد پیگیری نمایشی، مثل SHK-482193");
+        b.Property(x => x.Ip).HasMaxLength(64).HasComment("IP ثبت‌کننده‌ی پرداخت");
+        b.Property(x => x.SubmittedAt).HasComment("زمان ثبت پرداخت");
+        b.Property(x => x.Status).HasConversion<byte>().HasComment("وضعیت بررسی: 1=در انتظار،2=تأیید،3=رد");
+        b.Property(x => x.SubscriptionId).HasComment("اشتراک فعال/تمدیدشده با این پرداخت (برای غیرفعال‌سازی هنگام رد)");
+        b.Property(x => x.ReviewedAt).HasComment("زمان بررسی ادمین");
+        b.Property(x => x.ReviewedByUserId).HasComment("ادمین بررسی‌کننده");
+        b.Property(x => x.ReviewNote).HasMaxLength(300).HasComment("توضیح بررسی (مثلاً دلیل رد)");
+        // واکشی سریع پرداخت در انتظار هر کاربر و فهرست در انتظار بررسی.
+        b.HasIndex(x => new { x.UserId, x.Status });
+        b.HasIndex(x => x.Status);
+    }
+}
+
 public sealed class SystemSettingConfiguration : IEntityTypeConfiguration<SystemSetting>
 {
     public void Configure(EntityTypeBuilder<SystemSetting> b)

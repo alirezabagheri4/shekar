@@ -46,6 +46,9 @@ public sealed class MockBlockedAdvertiserRepository : IBlockedAdvertiserReposito
         Task.FromResult<IReadOnlyList<BlockedAdvertiser>>(
             _store.BlockedAdvertisers.OrderByDescending(x => x.BlockedAt).ToList());
 
+    public Task<BlockedAdvertiser?> GetAsync(int id, CancellationToken ct = default) =>
+        Task.FromResult(_store.BlockedAdvertisers.FirstOrDefault(x => x.Id == id));
+
     public Task<BlockedAdvertiser> AddAsync(BlockedAdvertiser entry, CancellationToken ct = default)
     {
         lock (_store.Gate)

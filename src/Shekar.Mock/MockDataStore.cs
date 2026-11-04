@@ -30,6 +30,7 @@ public sealed class MockDataStore
     public List<CrawlRun> CrawlRuns { get; } = new();
     public List<VehicleModel> VehicleModels { get; } = new();
     public List<MarketSegmentStat> MarketSegmentStats { get; } = new();
+    public List<Payment> Payments { get; } = new();
 
     /// <summary>شناسه‌ی کاربر نمونه‌ی لاگین‌شده (کامران رضایی، مشترک حرفه‌ای).</summary>
     public const int DemoUserId = 1;
@@ -181,6 +182,11 @@ public sealed class MockDataStore
         Set("SupportStartHour", "9", "int", "R12 — ساعت شروع پشتیبانی (Asia/Tehran)");
         Set("SupportEndHour", "18", "int", "R12 — ساعت پایان پشتیبانی (Asia/Tehran)");
         Set("MaxAdsPerMonthBeforeReview", "20", "int", "آستانه‌ی تعداد آگهی ماهانه برای بررسی دلال/اسپم");
+
+        // کارت مقصد پرداخت کارت‌به‌کارت (قابل تغییر بدون انتشار مجدد).
+        Set("CardTransfer.CardNumber", "6219861082608372", "string", "شماره کارت مقصد پرداخت کارت‌به‌کارت");
+        Set("CardTransfer.HolderName", "علیرضا باقری", "string", "نام صاحب کارت مقصد");
+        Set("CardTransfer.BankName", "بانک سامان", "string", "نام بانک کارت مقصد");
     }
 
     private void SeedVehicleModels()

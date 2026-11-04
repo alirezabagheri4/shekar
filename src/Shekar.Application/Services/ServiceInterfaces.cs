@@ -68,3 +68,31 @@ public interface ISupportService
     string HoursLabel { get; }
     string StatusLabel { get; }
 }
+
+/// <summary>پرداخت کارت‌به‌کارت: ثبت واریزی و فعال‌سازی اشتراک + بررسی ادمین.</summary>
+public interface IPaymentService
+{
+    /// <summary>اطلاعات کارت مقصد (از تنظیمات سراسری).</summary>
+    Task<CardTransferInfoDto> GetCardInfoAsync(CancellationToken ct = default);
+
+    /// <summary>ثبت پرداخت کارت‌به‌کارت کاربر جاری و فعال‌سازی/تمدید اشتراک (منتظر تأیید).</summary>
+    Task<CardTransferResultDto> SubmitCardTransferAsync(CardTransferSubmissionDto request, CancellationToken ct = default);
+
+    /// <summary>برچسب شمسی اعتبار اشتراک فعال کاربر جاری (برای صفحه‌ی بررسی)؛ در صورت نبود رشته‌ی خالی.</summary>
+    Task<string> GetActiveExpiresLabelAsync(CancellationToken ct = default);
+
+    // --- بررسی ادمین ---
+
+    Task<IReadOnlyList<PendingPaymentDto>> ListPendingAsync(CancellationToken ct = default);
+
+    /// <summary>تأیید پرداخت: وضعیت تأییدشده می‌شود (اشتراک از قبل فعال است).</summary>
+    Task ApproveAsync(int paymentId, int adminUserId, CancellationToken ct = default);
+
+    /// <summary>رد پرداخت (رسید جعلی): اشتراک غیرفعال و شماره‌ی کاربر بلاک می‌شود.</summary>
+    Task RejectAsync(int paymentId, int adminUserId, CancellationToken ct = default);
+
+    Task<IReadOnlyList<BlockedPhoneDto>> ListBlockedAsync(CancellationToken ct = default);
+
+    /// <summary>رفع بلاک یک شماره توسط ادمین.</summary>
+    Task UnblockAsync(int blockedId, int adminUserId, CancellationToken ct = default);
+}

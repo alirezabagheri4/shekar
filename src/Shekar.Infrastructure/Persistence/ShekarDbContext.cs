@@ -24,6 +24,7 @@ public class ShekarDbContext : DbContext
     public DbSet<Advertiser> Advertisers => Set<Advertiser>();
     public DbSet<BlockedAdvertiser> BlockedAdvertisers => Set<BlockedAdvertiser>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<Payment> Payments => Set<Payment>();
 
     // پایپ‌لاین داده (کراولر → اگریگیشن → اسکورینگ)
     public DbSet<VehicleModel> VehicleModels => Set<VehicleModel>();

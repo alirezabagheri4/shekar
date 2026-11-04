@@ -3,3 +3,5 @@ obj/
 *.user
 .vs/
 src/Shekar.Web/wwwroot/lib/
+# فایل‌های رسید پرداخت کارت‌به‌کارت (خارج از wwwroot؛ نباید commit شوند)
+src/Shekar.Web/App_Data/

@@ -24,6 +24,17 @@ public sealed record PaySuccessViewModel(
     string TrackingCode,
     bool IsTrial);
 
+/// <summary>صفحه‌ی پرداخت کارت‌به‌کارت: اطلاعات کارت مقصد + پلن انتخابی اولیه.</summary>
+public sealed record PayViewModel(CardTransferInfoDto Card, string Plan);
+
+/// <summary>صفحه‌ی بررسی واریزی: پلن، کد پیگیری و اعتبار اشتراک.</summary>
+public sealed record PayReviewViewModel(string Plan, string Reference, string ExpiresLabel);
+
+/// <summary>صفحه‌ی ادمین: پرداخت‌های در انتظار بررسی + شماره‌های بلاک‌شده.</summary>
+public sealed record AdminPaymentsViewModel(
+    IReadOnlyList<PendingPaymentDto> Pending,
+    IReadOnlyList<BlockedPhoneDto> Blocked);
+
 public sealed record LoginOtpViewModel(string Mobile);
 
 public sealed record LoginProfileViewModel(IReadOnlyList<(int Id, string Name, bool IsActive)> Cities);

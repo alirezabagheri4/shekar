@@ -39,6 +39,10 @@ else
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, CurrentUser>();
 
+// ذخیره‌سازی فایل رسید (خارج از wwwroot) + تشخیص ادمین (از پیکربندی Admin:Mobiles).
+builder.Services.AddSingleton<IReceiptStorage, LocalReceiptStorage>();
+builder.Services.AddScoped<IAdminAuthorizer, AdminAuthorizer>();
+
 // ProblemDetails + Exception Handler سراسری.
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
