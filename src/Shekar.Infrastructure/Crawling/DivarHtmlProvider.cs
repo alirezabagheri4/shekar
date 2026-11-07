@@ -10,15 +10,19 @@ namespace Shekar.Infrastructure.Crawling;
 
 /// <summary>
 /// منبع آگهیِ واقعیِ دیوار (کراول HTML صفحه‌ی دسته‌ی خودرو و استخراج JSON تعبیه‌شده).
-/// تمام درخواست‌ها از طریق <see cref="IWebFetcher"/> با رفتار انسان‌مانند و ضدبلاک انجام می‌شود؛
+/// تمام درخواست‌ها از طریق <see cref="IWebFetcher"/> با نرخ پایین و مؤدب انجام می‌شود؛
 /// فقط چند صفحه‌ی اول (آگهی‌های تازه) خوانده می‌شود و صفحه‌ی جزئیات برای کاهش بار فچ نمی‌شود.
 ///
-/// نکته: ساختار صفحه‌ی دیوار ممکن است تغییر کند؛ منطق استخراج دفاعی است و در اولین اجرای واقعی
-/// باید نام فیلدها/الگوی اسکریپت تعبیه‌شده تأیید و در صورت نیاز تنظیم شود (لاگِ «۰ آگهی»).
+/// ساختار داده (تأییدشده روی دیوارِ امروز): HTML خامِ سرور شامل
+/// <c>window.__PRELOADED_STATE__ = { ... };</c> است. آگهی‌ها در گره‌هایی با
+/// <c>"@type": ".../widgets.PostRowData"</c> قرار دارند و فیلدهای نمایشی دارند:
+/// title، token، image_url/image_count، middle_description_text (قیمت)،
+/// top_description_text (کارکرد)، action.payload.web_info (شهر/محله).
 /// </summary>
 public sealed partial class DivarHtmlProvider : IListingSourceProvider
 {
     private const string BaseUrl = "https://divar.ir";
+    private const string PostRowTypeSuffix = "PostRowData";
 
     private readonly IWebFetcher _fetcher;
     private readonly PoliteFetchOptions _options;
@@ -76,7 +80,7 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
 
             if (results.Count == before)
             {
-                break; // صفحه‌ی خالی یا الگوی تغییریافته → ادامه نده
+                break; // صفحه‌ی خالی، تکراری یا الگوی تغییریافته → ادامه نده
             }
         }
 
@@ -84,12 +88,13 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
         return results;
     }
 
-    /// <summary>از HTML، JSON تعبیه‌شده را درمی‌آورد و کارت‌های آگهی را نگاشت می‌کند.</summary>
+    /// <summary>از HTML، JSON تعبیه‌شده را درمی‌آورد و گره‌های آگهی (PostRowData) را نگاشت می‌کند.</summary>
     private IEnumerable<RawListingDto> ParsePage(string html, string slug)
     {
-        string? json = ExtractEmbeddedJson(html);
+        string? json = ExtractPreloadedState(html);
         if (json is null)
         {
+            _logger.LogWarning("دیوار/{Slug}: بلاک __PRELOADED_STATE__ در HTML پیدا نشد (ساختار صفحه تغییر کرده؟)", slug);
             yield break;
         }
 
@@ -98,14 +103,15 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
         {
             doc = JsonDocument.Parse(json);
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
+            _logger.LogWarning(ex, "دیوار/{Slug}: پارس JSON صفحه ناموفق بود", slug);
             yield break;
         }
 
         using (doc)
         {
-            foreach (JsonElement post in FindPostObjects(doc.RootElement))
+            foreach (JsonElement post in FindPostRows(doc.RootElement))
             {
                 RawListingDto? dto = MapPost(post, slug);
                 if (dto is not null)
@@ -116,54 +122,84 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
         }
     }
 
-    /// <summary>اسکریپت وضعیتِ اولیه را از HTML استخراج می‌کند (الگوهای رایج Next.js/پری‌لود).</summary>
-    private static string? ExtractEmbeddedJson(string html)
+    /// <summary>
+    /// بلاک <c>__PRELOADED_STATE__ = { ... };</c> را با تطبیقِ آکولادِ متوازن (رشته‌آگاه) استخراج می‌کند.
+    /// مطمئن‌تر از regex برای JSON چندصدکیلوبایتی است.
+    /// </summary>
+    internal static string? ExtractPreloadedState(string html)
     {
-        Match next = NextDataRegex().Match(html);
-        if (next.Success)
+        int marker = html.IndexOf("__PRELOADED_STATE__", StringComparison.Ordinal);
+        if (marker < 0)
         {
-            return next.Groups[1].Value;
+            return null;
         }
 
-        Match preload = PreloadRegex().Match(html);
-        return preload.Success ? preload.Groups[1].Value : null;
+        int eq = html.IndexOf('=', marker);
+        if (eq < 0)
+        {
+            return null;
+        }
+
+        int start = html.IndexOf('{', eq);
+        if (start < 0)
+        {
+            return null;
+        }
+
+        int depth = 0;
+        bool inString = false, escape = false;
+        for (int i = start; i < html.Length; i++)
+        {
+            char c = html[i];
+            if (inString)
+            {
+                if (escape) { escape = false; }
+                else if (c == '\\') { escape = true; }
+                else if (c == '"') { inString = false; }
+                continue;
+            }
+
+            switch (c)
+            {
+                case '"': inString = true; break;
+                case '{': depth++; break;
+                case '}':
+                    depth--;
+                    if (depth == 0)
+                    {
+                        return html.Substring(start, i - start + 1);
+                    }
+                    break;
+            }
+        }
+
+        return null; // آکولادِ بسته‌ی متناظر پیدا نشد (HTML ناقص)
     }
 
-    /// <summary>به‌صورت بازگشتی دنبال آرایه‌ای از اشیاءِ شبیه‌آگهی (دارای token/title) می‌گردد.</summary>
-    private static IEnumerable<JsonElement> FindPostObjects(JsonElement element)
+    /// <summary>به‌صورت بازگشتی هر آبجکتِ آگهی (<c>@type</c> منتهی به PostRowData) را می‌یابد.</summary>
+    private static IEnumerable<JsonElement> FindPostRows(JsonElement element)
     {
         switch (element.ValueKind)
         {
-            case JsonValueKind.Array:
-                bool looksLikePosts = element.GetArrayLength() > 0
-                    && element[0].ValueKind == JsonValueKind.Object
-                    && (element[0].TryGetProperty("token", out _) || element[0].TryGetProperty("title", out _));
-                if (looksLikePosts)
+            case JsonValueKind.Object:
+                if (IsPostRow(element))
                 {
-                    foreach (JsonElement item in element.EnumerateArray())
-                    {
-                        if (item.ValueKind == JsonValueKind.Object)
-                        {
-                            yield return item;
-                        }
-                    }
+                    yield return element;
+                    yield break; // داخل یک آگهی دنبال آگهیِ تودرتو نگرد
                 }
-                else
+                foreach (JsonProperty prop in element.EnumerateObject())
                 {
-                    foreach (JsonElement item in element.EnumerateArray())
+                    foreach (JsonElement found in FindPostRows(prop.Value))
                     {
-                        foreach (JsonElement found in FindPostObjects(item))
-                        {
-                            yield return found;
-                        }
+                        yield return found;
                     }
                 }
                 break;
 
-            case JsonValueKind.Object:
-                foreach (JsonProperty prop in element.EnumerateObject())
+            case JsonValueKind.Array:
+                foreach (JsonElement item in element.EnumerateArray())
                 {
-                    foreach (JsonElement found in FindPostObjects(prop.Value))
+                    foreach (JsonElement found in FindPostRows(item))
                     {
                         yield return found;
                     }
@@ -172,20 +208,34 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
         }
     }
 
+    private static bool IsPostRow(JsonElement obj)
+    {
+        if (obj.TryGetProperty("@type", out JsonElement t)
+            && t.ValueKind == JsonValueKind.String
+            && (t.GetString()?.EndsWith(PostRowTypeSuffix, StringComparison.Ordinal) ?? false))
+        {
+            return true;
+        }
+
+        // پشتیبان: اگر @type نبود، آبجکتی که هم token و هم متنِ قیمت دارد را آگهی بشمار.
+        return obj.TryGetProperty("token", out _) && obj.TryGetProperty("middle_description_text", out _);
+    }
+
     private RawListingDto? MapPost(JsonElement post, string slug)
     {
-        string? token = GetString(post, "token");
-        string? title = GetString(post, "title") ?? GetString(post, "normalizedTitle");
+        string? token = GetString(post, "token") ?? GetTokenFromAction(post);
+        string? title = GetString(post, "title");
         if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(title))
         {
             return null;
         }
 
-        long price = ReadPrice(post);
-        string? image = GetString(post, "imageUrl") ?? GetString(post, "image") ?? FirstImageFromArray(post);
-        int imageCount = image is null ? 0 : 1;
-        string? subtitle = GetString(post, "subtitle") ?? GetString(post, "middleDescriptionText");
-        (int? year, int? mileage) = ParseYearMileage($"{title} {subtitle}");
+        long price = ParseMoney(GetString(post, "middle_description_text"));
+        int? mileage = ParseMileage(GetString(post, "top_description_text"));
+        string? image = GetString(post, "image_url");
+        int imageCount = GetInt(post, "image_count") ?? (image is null ? 0 : 1);
+        (int? year, _) = ParseYearMileage(title!);
+        string? location = GetWebInfo(post, "district_persian") ?? GetWebInfo(post, "city_persian") ?? slug;
 
         return new RawListingDto
         {
@@ -193,42 +243,58 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
             ExternalId = token!,
             Url = $"{BaseUrl}/v/{token}",
             Title = title!,
-            RawLocation = GetString(post, "city") ?? GetString(post, "district") ?? slug,
+            RawLocation = location,
             ModelYear = year,
             MileageKm = mileage,
             PriceToman = price,
             ImageCount = imageCount,
             FirstImageUrl = image,
             BodyCondition = BodyCondition.Unknown,
-            // زمان دقیقِ انتشار در کارت لیست همیشه نیست؛ محافظه‌کارانه «همین حالا» تا فیلتر ۲۴ساعت ردش نکند.
+            // زمان دقیقِ انتشار در کارت لیست نیست؛ چون با recent_ads فیلتر می‌کنیم، محافظه‌کارانه «همین حالا».
             PublishedAt = DateTimeOffset.UtcNow,
             RawJson = post.GetRawText()
         };
     }
 
-    private static long ReadPrice(JsonElement post)
+    private static string? GetTokenFromAction(JsonElement post) =>
+        post.TryGetProperty("action", out JsonElement a) && a.ValueKind == JsonValueKind.Object
+        && a.TryGetProperty("payload", out JsonElement p) && p.ValueKind == JsonValueKind.Object
+            ? GetString(p, "token")
+            : null;
+
+    private static string? GetWebInfo(JsonElement post, string name) =>
+        post.TryGetProperty("action", out JsonElement a) && a.ValueKind == JsonValueKind.Object
+        && a.TryGetProperty("payload", out JsonElement p) && p.ValueKind == JsonValueKind.Object
+        && p.TryGetProperty("web_info", out JsonElement w) && w.ValueKind == JsonValueKind.Object
+            ? GetString(w, name)
+            : null;
+
+    /// <summary>متنِ قیمتِ فارسی («۱,۴۵۰,۰۰۰,۰۰۰ تومان») را به عدد تبدیل می‌کند؛ «توافقی»/بدون‌رقم → ۰.</summary>
+    private static long ParseMoney(string? text)
     {
-        foreach (string name in new[] { "price", "priceValue", "rawPrice" })
+        if (string.IsNullOrEmpty(text))
         {
-            if (post.TryGetProperty(name, out JsonElement p))
-            {
-                if (p.ValueKind == JsonValueKind.Number && p.TryGetInt64(out long v))
-                {
-                    return v;
-                }
-                if (p.ValueKind == JsonValueKind.String && long.TryParse(DigitsOnly(p.GetString()), out long sv))
-                {
-                    return sv;
-                }
-            }
+            return 0;
         }
-        return 0;
+        string digits = new(DigitsToLatin(text).Where(char.IsDigit).ToArray());
+        return long.TryParse(digits, out long v) ? v : 0;
+    }
+
+    /// <summary>کارکرد را از متنِ «۱۴۷,۰۰۰ کیلومتر» درمی‌آورد؛ «۰ کیلومتر» → ۰. بدون عدد → null.</summary>
+    private static int? ParseMileage(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            return null;
+        }
+        Match m = MileageRegex().Match(DigitsToLatin(text));
+        return m.Success && int.TryParse(m.Groups[1].Value.Replace(",", string.Empty), out int v) ? v : null;
     }
 
     private static (int? Year, int? Mileage) ParseYearMileage(string text)
     {
         int? year = null, mileage = null;
-        Match y = YearRegex().Match(text);
+        Match y = YearRegex().Match(DigitsToLatin(text));
         if (y.Success && int.TryParse(y.Value, out int yv))
         {
             year = yv;
@@ -244,17 +310,8 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
     private static string? GetString(JsonElement e, string name) =>
         e.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.String ? v.GetString() : null;
 
-    private static string? FirstImageFromArray(JsonElement post)
-    {
-        if (post.TryGetProperty("images", out JsonElement imgs) && imgs.ValueKind == JsonValueKind.Array && imgs.GetArrayLength() > 0)
-        {
-            JsonElement first = imgs[0];
-            return first.ValueKind == JsonValueKind.String ? first.GetString() : GetString(first, "url") ?? GetString(first, "src");
-        }
-        return null;
-    }
-
-    private static string DigitsOnly(string? s) => new((s ?? string.Empty).Where(char.IsDigit).ToArray());
+    private static int? GetInt(JsonElement e, string name) =>
+        e.TryGetProperty(name, out JsonElement v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out int i) ? i : null;
 
     private static string DigitsToLatin(string s)
     {
@@ -262,20 +319,19 @@ public sealed partial class DivarHtmlProvider : IListingSourceProvider
         for (int i = 0; i < s.Length; i++)
         {
             char c = s[i];
-            buf[i] = c switch { >= '۰' and <= '۹' => (char)('0' + (c - '۰')), >= '٠' and <= '٩' => (char)('0' + (c - '٠')), _ => c };
+            buf[i] = c switch
+            {
+                >= '۰' and <= '۹' => (char)('0' + (c - '۰')),
+                >= '٠' and <= '٩' => (char)('0' + (c - '٠')),
+                _ => c
+            };
         }
         return new string(buf);
     }
 
-    [GeneratedRegex("<script id=\"__NEXT_DATA__\" type=\"application/json\">(.*?)</script>", RegexOptions.Singleline)]
-    private static partial Regex NextDataRegex();
-
-    [GeneratedRegex("window\\.__PRELOADED_STATE__\\s*=\\s*(\\{.*?\\});", RegexOptions.Singleline)]
-    private static partial Regex PreloadRegex();
-
-    [GeneratedRegex("1[34]\\d{2}")]
+    [GeneratedRegex("(?<!\\d)1[34]\\d{2}(?!\\d)")]
     private static partial Regex YearRegex();
 
-    [GeneratedRegex("([\\d,]{3,})\\s*(?:کیلومتر|km|هزار)")]
+    [GeneratedRegex("([\\d,]{1,})\\s*(?:کیلومتر|km)")]
     private static partial Regex MileageRegex();
 }
