@@ -156,8 +156,14 @@ public interface ICarListingRepository
     /// <summary>آگهی‌های فعالِ نرمال‌نشده (VehicleModelId خالی) برای نرمال‌سازی.</summary>
     Task<IReadOnlyList<CarListing>> ListUnmatchedAsync(int max, CancellationToken ct = default);
 
-    /// <summary>آگهی‌های فعالِ نرمال‌شده‌ی منتشرشده از زمان مشخص (ورودیِ اگریگیشن).</summary>
+    /// <summary>آگهی‌های فعالِ نرمال‌شده‌ی منتشرشده از زمان مشخص (ورودیِ اسکورینگ: فقط قابل‌خرید).</summary>
     Task<IReadOnlyList<CarListing>> ListMatchedActiveSinceAsync(DateTimeOffset sinceUtc, CancellationToken ct = default);
+
+    /// <summary>
+    /// آگهی‌های نرمال‌شده‌ای که در پنجره‌ی اخیر «دیده» شده‌اند (فعال یا به‌تازگی‌حذف‌شده)، برای اگریگیشن.
+    /// شاملِ آگهی‌های حذف‌شده‌ی درونِ پنجره است تا تاریخچه انباشته و نمونه‌ی سگمنت کافی شود.
+    /// </summary>
+    Task<IReadOnlyList<CarListing>> ListMatchedSeenSinceAsync(DateTimeOffset sinceUtc, CancellationToken ct = default);
 
     Task<CarListing> AddAsync(CarListing listing, CancellationToken ct = default);
     Task UpdateAsync(CarListing listing, CancellationToken ct = default);

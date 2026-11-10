@@ -355,6 +355,11 @@ public sealed class EfCarListingRepository : ICarListingRepository
             .Where(l => l.State == ListingState.Active && l.VehicleModelId != null && l.PublishedAt >= sinceUtc)
             .ToListAsync(ct);
 
+    public async Task<IReadOnlyList<CarListing>> ListMatchedSeenSinceAsync(DateTimeOffset sinceUtc, CancellationToken ct = default) =>
+        await _db.CarListings.AsNoTracking()
+            .Where(l => l.VehicleModelId != null && l.ModelYear != null && l.LastSeenAt >= sinceUtc)
+            .ToListAsync(ct);
+
     public async Task<CarListing> AddAsync(CarListing listing, CancellationToken ct = default)
     {
         _db.CarListings.Add(listing);

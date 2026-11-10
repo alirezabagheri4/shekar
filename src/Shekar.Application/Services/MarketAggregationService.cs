@@ -38,7 +38,9 @@ public sealed class MarketAggregationService : IMarketAggregationService
         DateTimeOffset now = _clock.UtcNow;
         DateTimeOffset since = now.AddDays(-windowDays);
 
-        IReadOnlyList<CarListing> listings = await _listings.ListMatchedActiveSinceAsync(since, ct);
+        // پنجره‌ی اگریگیشن شاملِ آگهی‌های «دیده‌شده» (فعال + به‌تازگی‌حذف‌شده) است تا تاریخچه
+        // انباشته و نمونه‌ی سگمنت به حدنصاب برسد.
+        IReadOnlyList<CarListing> listings = await _listings.ListMatchedSeenSinceAsync(since, ct);
         IReadOnlyList<VehicleModel> models = await _models.ListActiveAsync(ct);
         Dictionary<int, VehicleModel> modelById = models.ToDictionary(m => m.Id);
 
@@ -77,6 +79,10 @@ public sealed class MarketAggregationService : IMarketAggregationService
         foreach (SegmentAccumulator acc in groups.Values)
         {
             ct.ThrowIfCancellationRequested();
+            // آمارِ مقاوم: پرت‌ها را پیش از محاسبه حذف می‌کنیم (میانه ذاتاً مقاوم است، اما
+            // میانگین/چارک‌ها نه). SampleCount = تعدادِ نمونه‌ی به‌کاررفته پس از تریم.
+            IReadOnlyList<long> prices = Statistics.TrimOutliers(acc.Prices);
+
             MarketSegmentStat stat = await _stats.GetBySegmentKeyAsync(acc.Key, ct) ?? new MarketSegmentStat();
             stat.SegmentKey = acc.Key;
             stat.VehicleModelId = acc.VehicleModelId;
@@ -84,11 +90,11 @@ public sealed class MarketAggregationService : IMarketAggregationService
             stat.MileageBucket = acc.Bucket;
             stat.BodyCondition = acc.BodyCondition;
             stat.ColorKey = acc.ColorKey;
-            stat.SampleCount = acc.Prices.Count;
-            stat.MedianPriceToman = Statistics.Median(acc.Prices);
-            stat.AveragePriceToman = Statistics.Average(acc.Prices);
-            stat.P25PriceToman = Statistics.Percentile(acc.Prices, 25);
-            stat.P75PriceToman = Statistics.Percentile(acc.Prices, 75);
+            stat.SampleCount = prices.Count;
+            stat.MedianPriceToman = Statistics.Median(prices);
+            stat.AveragePriceToman = Statistics.Average(prices);
+            stat.P25PriceToman = Statistics.Percentile(prices, 25);
+            stat.P75PriceToman = Statistics.Percentile(prices, 75);
             stat.WindowDays = windowDays;
             stat.ComputedAt = now;
             await _stats.UpsertAsync(stat, ct);

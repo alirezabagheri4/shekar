@@ -29,6 +29,11 @@ public sealed class MockCarListingRepository : ICarListingRepository
             .Where(l => l.State == ListingState.Active && l.VehicleModelId != null && l.PublishedAt >= sinceUtc)
             .ToList());
 
+    public Task<IReadOnlyList<CarListing>> ListMatchedSeenSinceAsync(DateTimeOffset sinceUtc, CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<CarListing>>(_store.CarListings
+            .Where(l => l.VehicleModelId != null && l.ModelYear != null && l.LastSeenAt >= sinceUtc)
+            .ToList());
+
     public Task<CarListing> AddAsync(CarListing listing, CancellationToken ct = default)
     {
         lock (_store.Gate)

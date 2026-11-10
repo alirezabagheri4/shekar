@@ -54,6 +54,28 @@ public class MarketAggregationTests
     }
 
     [Fact]
+    public async Task Aggregate_IncludesRecentlyRemoved_ForHistory()
+    {
+        // آگهیِ فعال + آگهیِ به‌تازگی‌حذف‌شده (هم‌سگمنت) باید هر دو در نمونه بیایند.
+        AddListing(1, 1402, 10_000, 1_000_000_000, BodyCondition.Healthy, "سفید");
+        _store.CarListings.Add(new CarListing
+        {
+            Id = _store.CarListings.Select(l => l.Id).Max() + 1,
+            Source = ListingSource.Divar, ExternalId = Guid.NewGuid().ToString(),
+            Title = "x", VehicleModelId = 1, ModelYear = 1402, MileageKm = 11_000,
+            PriceToman = 1_400_000_000, BodyCondition = BodyCondition.Healthy, Color = "مشکی",
+            State = ListingState.Removed, PublishedAt = _clock.UtcNow.AddHours(-20),
+            FetchedAt = _clock.UtcNow.AddHours(-20), LastSeenAt = _clock.UtcNow.AddHours(-2),
+            RemovedAt = _clock.UtcNow.AddHours(-2)
+        });
+
+        int segments = await Build().RunAsync(windowDays: 30);
+
+        Assert.Equal(1, segments);
+        Assert.Equal(2, _store.MarketSegmentStats.Single().SampleCount); // شاملِ حذف‌شده‌ی اخیر
+    }
+
+    [Fact]
     public async Task Aggregate_SplitsByColor_WhenAbove4Billion()
     {
         // بالای ۴ میلیارد → رنگ در کلید سگمنت دخیل می‌شود.
