@@ -72,7 +72,7 @@ public class ListingIngestionTests
         };
 
         var svc = new ListingIngestionService(listings, runs, blocked, _clock);
-        IngestionResult r = await svc.RunAsync(new StubProvider(ads), cityId: 1, maxAgeHours: 24);
+        IngestionResult r = await svc.RunAsync(new StubProvider(ads), cityId: 1, maxAgeHours: 24, staleAfterHours: 72);
 
         Assert.Equal(7, r.Fetched);
         Assert.Equal(1, r.Saved);     // فقط OK-1

@@ -17,6 +17,12 @@ public class VehicleModel
     /// <summary>تریم/تیپ، مثل «دستی پانوراما»؛ ممکن است خالی باشد.</summary>
     public string? Trim { get; set; }
 
+    /// <summary>
+    /// شناسه‌ی قطعیِ مدل در دیوار (brand_model، مثل «Peugeot 206 3-normal»)؛ یکتا.
+    /// مبنای نگاشتِ قطعی و رجیستر خودکار؛ NULL برای مدل‌های seedِ دستی.
+    /// </summary>
+    public string? DivarKey { get; set; }
+
     /// <summary>نوع بدنه، مثل «هاچ‌بک»/«سدان»/«شاسی‌بلند».</summary>
     public string? BodyType { get; set; }
 

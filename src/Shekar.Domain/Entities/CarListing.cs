@@ -37,6 +37,11 @@ public class CarListing
     /// <summary>تریم خام استخراج‌شده از آگهی.</summary>
     public string? RawTrim { get; set; }
 
+    /// <summary>
+    /// شناسه‌ی قطعیِ مدل در منبع (brand_model دیوار)؛ مبنای نگاشت/رجیستر خودکارِ مدل.
+    /// </summary>
+    public string? SourceModelKey { get; set; }
+
     /// <summary>سال مدل.</summary>
     public int? ModelYear { get; set; }
 

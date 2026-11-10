@@ -52,6 +52,17 @@ public sealed class MockVehicleModelRepository : IVehicleModelRepository
 
     public Task<IReadOnlyList<VehicleModel>> ListActiveAsync(CancellationToken ct = default) =>
         Task.FromResult<IReadOnlyList<VehicleModel>>(_store.VehicleModels.Where(m => m.IsActive).ToList());
+
+    public Task<VehicleModel?> GetByDivarKeyAsync(string divarKey, CancellationToken ct = default) =>
+        Task.FromResult(_store.VehicleModels.FirstOrDefault(m =>
+            string.Equals(m.DivarKey, divarKey, StringComparison.OrdinalIgnoreCase)));
+
+    public Task<VehicleModel> AddAsync(VehicleModel model, CancellationToken ct = default)
+    {
+        model.Id = _store.VehicleModels.Count == 0 ? 1 : _store.VehicleModels.Max(m => m.Id) + 1;
+        _store.VehicleModels.Add(model);
+        return Task.FromResult(model);
+    }
 }
 
 public sealed class MockMarketSegmentStatRepository : IMarketSegmentStatRepository

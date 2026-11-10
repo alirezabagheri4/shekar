@@ -167,6 +167,12 @@ public interface IVehicleModelRepository
 {
     Task<VehicleModel?> GetAsync(int id, CancellationToken ct = default);
     Task<IReadOnlyList<VehicleModel>> ListActiveAsync(CancellationToken ct = default);
+
+    /// <summary>مدل را با شناسه‌ی قطعیِ منبع (DivarKey) می‌یابد؛ <c>null</c> اگر نبود.</summary>
+    Task<VehicleModel?> GetByDivarKeyAsync(string divarKey, CancellationToken ct = default);
+
+    /// <summary>مدل جدید را اضافه می‌کند و نمونه‌ی دارای Id را برمی‌گرداند (رجیستر خودکار).</summary>
+    Task<VehicleModel> AddAsync(VehicleModel model, CancellationToken ct = default);
 }
 
 public interface IMarketSegmentStatRepository

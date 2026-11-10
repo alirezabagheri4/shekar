@@ -12,7 +12,7 @@ public sealed record IngestionResult(int Fetched, int Saved, int Skipped, int Re
 /// <summary>دریافت و ذخیره‌ی آگهی‌های خام با فیلترها (مرحله ۱ پایپ‌لاین).</summary>
 public interface IListingIngestionService
 {
-    Task<IngestionResult> RunAsync(IListingSourceProvider provider, int cityId, int maxAgeHours, CancellationToken ct = default);
+    Task<IngestionResult> RunAsync(IListingSourceProvider provider, int cityId, int maxAgeHours, int staleAfterHours, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -38,7 +38,7 @@ public sealed class ListingIngestionService : IListingIngestionService
         _clock = clock;
     }
 
-    public async Task<IngestionResult> RunAsync(IListingSourceProvider provider, int cityId, int maxAgeHours, CancellationToken ct = default)
+    public async Task<IngestionResult> RunAsync(IListingSourceProvider provider, int cityId, int maxAgeHours, int staleAfterHours, CancellationToken ct = default)
     {
         DateTimeOffset now = _clock.UtcNow;
         CrawlRun run = await _runs.AddAsync(new CrawlRun
@@ -53,7 +53,17 @@ public sealed class ListingIngestionService : IListingIngestionService
 
         try
         {
-            IReadOnlyList<RawListingDto> ads = await provider.FetchRecentAsync(cityId, ct);
+            // آگهی‌های فعالِ این منبع را یک‌بار بارگذاری می‌کنیم: هم برای رد کردنِ فچِ تکراریِ
+            // صفحه‌ی جزئیات (کراول دومرحله‌ای)، هم برای تشخیصِ کهنگی در پایان پاس.
+            IReadOnlyList<CarListing> active = await _listings.ListActiveAsync(provider.Source, ct);
+            // فقط آگهی‌های «غنی‌شده» (دارای سال) را شناخته‌شده می‌شماریم تا صفحه‌ی جزئیاتشان
+            // دوباره فچ نشود. آگهیِ موجودِ بدون‌سال (مثلاً فچِ اول چلنجِ ضدبات خورده) دوباره تلاش می‌شود.
+            var enrichedExternalIds = active
+                .Where(l => l.ModelYear is not null)
+                .Select(l => l.ExternalId)
+                .ToHashSet(StringComparer.Ordinal);
+
+            IReadOnlyList<RawListingDto> ads = await provider.FetchRecentAsync(cityId, enrichedExternalIds, ct);
             DateTimeOffset minPublished = now.AddHours(-maxAgeHours);
             var seenExternalIds = new HashSet<string>(StringComparer.Ordinal);
 
@@ -105,6 +115,7 @@ public sealed class ListingIngestionService : IListingIngestionService
                             existing.State = ListingState.Active;
                             existing.RemovedAt = null;
                         }
+                        BackfillEnrichment(existing, ad);
                         await _listings.UpdateAsync(existing, ct);
                         continue;
                     }
@@ -130,9 +141,12 @@ public sealed class ListingIngestionService : IListingIngestionService
                 }
             }
 
-            // تشخیص حذف: آگهی‌های فعالِ این منبع که در این پاس دیده نشدند.
-            IReadOnlyList<CarListing> active = await _listings.ListActiveAsync(provider.Source, ct);
-            foreach (CarListing listing in active.Where(l => l.CityId == cityId && !seenExternalIds.Contains(l.ExternalId)))
+            // تشخیص حذف با TTLِ کهنگی: چون کراولِ تدریجی فقط آگهی‌های تازه را اسکن می‌کند،
+            // «دیده‌نشدن در این پاس» دلیل حذف نیست. فقط آگهیِ فعالی که مدتی طولانی (StaleAfterHours)
+            // دیگر دیده نشده را حذف‌شده علامت می‌زنیم. (آگهی‌های دیده‌شده در این پاس LastSeen=now دارند.)
+            DateTimeOffset staleBefore = now.AddHours(-Math.Max(1, staleAfterHours));
+            foreach (CarListing listing in active.Where(l =>
+                l.CityId == cityId && !seenExternalIds.Contains(l.ExternalId) && l.LastSeenAt < staleBefore))
             {
                 listing.State = ListingState.Removed;
                 listing.RemovedAt = now;
@@ -160,6 +174,21 @@ public sealed class ListingIngestionService : IListingIngestionService
         return new IngestionResult(fetched, saved, skipped, removed, errors);
     }
 
+    /// <summary>
+    /// فیلدهای غنی‌سازی را روی آگهیِ موجود بک‌فیل می‌کند، فقط وقتی قبلاً خالی بوده‌اند و اکنون
+    /// از جزئیات آمده‌اند (بازیابی پس از چلنجِ ضدباتِ فچِ اول). قیمت اینجا دست نمی‌خورد.
+    /// </summary>
+    private static void BackfillEnrichment(CarListing existing, RawListingDto ad)
+    {
+        if (existing.ModelYear is null && ad.ModelYear is not null) existing.ModelYear = ad.ModelYear;
+        if (existing.MileageKm is null && ad.MileageKm is not null) existing.MileageKm = ad.MileageKm;
+        if (string.IsNullOrEmpty(existing.Color) && !string.IsNullOrEmpty(ad.Color)) existing.Color = ad.Color;
+        if (string.IsNullOrEmpty(existing.SourceModelKey) && !string.IsNullOrEmpty(ad.SourceModelKey)) existing.SourceModelKey = ad.SourceModelKey;
+        if (string.IsNullOrEmpty(existing.RawBrand) && !string.IsNullOrEmpty(ad.RawBrand)) existing.RawBrand = ad.RawBrand;
+        if (string.IsNullOrEmpty(existing.RawModel) && !string.IsNullOrEmpty(ad.RawModel)) existing.RawModel = ad.RawModel;
+        if (string.IsNullOrEmpty(existing.RawTrim) && !string.IsNullOrEmpty(ad.RawTrim)) existing.RawTrim = ad.RawTrim;
+    }
+
     private static CarListing Map(RawListingDto ad, string hash, int cityId, DateTimeOffset now) => new()
     {
         Source = ad.Source,
@@ -170,6 +199,7 @@ public sealed class ListingIngestionService : IListingIngestionService
         RawBrand = ad.RawBrand,
         RawModel = ad.RawModel,
         RawTrim = ad.RawTrim,
+        SourceModelKey = ad.SourceModelKey,
         ModelYear = ad.ModelYear,
         MileageKm = ad.MileageKm,
         Color = ad.Color,

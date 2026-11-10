@@ -310,6 +310,11 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("tinyint")
                         .HasComment("منبع: 1=دیوار، 2=باما");
 
+                    b.Property<string>("SourceModelKey")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasComment("شناسه‌ی قطعیِ مدل در منبع (brand_model دیوار)؛ مبنای نگاشت/رجیستر خودکار");
+
                     b.Property<byte>("State")
                         .HasColumnType("tinyint")
                         .HasComment("وضعیت: 1=فعال، 2=حذف‌شده");
@@ -1110,6 +1115,11 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit")
                         .HasComment("آیا رنگ برای این مدل همیشه در قیمت مهم است");
 
+                    b.Property<string>("DivarKey")
+                        .HasMaxLength(120)
+                        .HasColumnType("nvarchar(120)")
+                        .HasComment("شناسه‌ی قطعیِ مدل در دیوار (brand_model)؛ یکتا؛ مبنای رجیستر خودکار");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("bit")
                         .HasComment("آیا مدل فعال است");
@@ -1135,6 +1145,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasComment("تریم/تیپ، مثل «دستی پانوراما»");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DivarKey")
+                        .IsUnique()
+                        .HasFilter("[DivarKey] IS NOT NULL");
 
                     b.HasIndex("Brand", "Model", "Trim");
 

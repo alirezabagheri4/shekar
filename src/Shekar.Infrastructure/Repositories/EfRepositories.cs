@@ -379,6 +379,16 @@ public sealed class EfVehicleModelRepository : IVehicleModelRepository
 
     public async Task<IReadOnlyList<VehicleModel>> ListActiveAsync(CancellationToken ct = default) =>
         await _db.VehicleModels.AsNoTracking().Where(m => m.IsActive).ToListAsync(ct);
+
+    public Task<VehicleModel?> GetByDivarKeyAsync(string divarKey, CancellationToken ct = default) =>
+        _db.VehicleModels.FirstOrDefaultAsync(m => m.DivarKey == divarKey, ct);
+
+    public async Task<VehicleModel> AddAsync(VehicleModel model, CancellationToken ct = default)
+    {
+        _db.VehicleModels.Add(model);
+        await _db.SaveChangesAsync(ct);
+        return model;
+    }
 }
 
 public sealed class EfMarketSegmentStatRepository : IMarketSegmentStatRepository

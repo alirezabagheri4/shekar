@@ -14,6 +14,13 @@ public sealed record RawListingDto
     public string? RawBrand { get; init; }
     public string? RawModel { get; init; }
     public string? RawTrim { get; init; }
+
+    /// <summary>
+    /// شناسه‌ی قطعیِ مدل در منبع (مثلاً brand_model دیوار: «Peugeot 206 3-normal»).
+    /// مبنای رجیستر خودکار مدل در کاتالوگ برای پوشش همه‌ی مدل‌ها.
+    /// </summary>
+    public string? SourceModelKey { get; init; }
+
     public int? ModelYear { get; init; }
     public int? MileageKm { get; init; }
     public string? Color { get; init; }

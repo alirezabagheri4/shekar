@@ -28,6 +28,7 @@ public sealed class CrawlJob : IJob
     {
         CancellationToken ct = context.CancellationToken;
         int maxAgeHours = _config.GetValue<int?>("Crawl:MaxAgeHours") ?? 24;
+        int staleAfterHours = _config.GetValue<int?>("Crawl:StaleAfterHours") ?? 72;
 
         // بی‌نظمیِ انسان‌مانند: هر پاس با تأخیرِ تصادفی شروع شود تا زمان‌بندی دقیقاً دوره‌ای نباشد.
         int jitterSeconds = _config.GetValue<int?>("Crawl:StartJitterSeconds") ?? 0;
@@ -49,7 +50,7 @@ public sealed class CrawlJob : IJob
             {
                 try
                 {
-                    IngestionResult r = await ingestion.RunAsync(provider, city.Id, maxAgeHours, ct);
+                    IngestionResult r = await ingestion.RunAsync(provider, city.Id, maxAgeHours, staleAfterHours, ct);
                     _logger.LogInformation(
                         "کراول {Source}/{City}: دریافت {Fetched}، ذخیره {Saved}، ردشده {Skipped}، حذف {Removed}، خطا {Errors}",
                         provider.Source, city.Name, r.Fetched, r.Saved, r.Skipped, r.Removed, r.Errors);

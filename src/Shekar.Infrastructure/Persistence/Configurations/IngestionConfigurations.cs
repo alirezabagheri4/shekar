@@ -15,6 +15,7 @@ public sealed class VehicleModelConfiguration : IEntityTypeConfiguration<Vehicle
         b.Property(x => x.Brand).HasMaxLength(60).IsRequired().HasComment("برند، مثل «پژو»");
         b.Property(x => x.Model).HasMaxLength(60).IsRequired().HasComment("مدل، مثل «۲۰۷»");
         b.Property(x => x.Trim).HasMaxLength(80).HasComment("تریم/تیپ، مثل «دستی پانوراما»");
+        b.Property(x => x.DivarKey).HasMaxLength(120).HasComment("شناسه‌ی قطعیِ مدل در دیوار (brand_model)؛ یکتا؛ مبنای رجیستر خودکار");
         b.Property(x => x.BodyType).HasMaxLength(40).HasComment("نوع بدنه: هاچ‌بک/سدان/شاسی‌بلند");
         b.Property(x => x.LiquidityScore).HasComment("نقدشوندگی از پیش‌تعیین‌شده ۰..۱۰۰ (سرعت فروش)");
         b.Property(x => x.ColorSensitive).HasComment("آیا رنگ برای این مدل همیشه در قیمت مهم است");
@@ -32,6 +33,8 @@ public sealed class VehicleModelConfiguration : IEntityTypeConfiguration<Vehicle
         b.Property(x => x.Aliases).HasColumnType("nvarchar(max)").HasComment("نام‌های مستعار برای تطبیق متن آگهی (JSON)");
 
         b.HasIndex(x => new { x.Brand, x.Model, x.Trim });
+        // نگاشتِ قطعی از شناسه‌ی منبع؛ یکتا میان مقادیر غیرتهی.
+        b.HasIndex(x => x.DivarKey).IsUnique().HasFilter("[DivarKey] IS NOT NULL");
     }
 }
 
@@ -50,6 +53,7 @@ public sealed class CarListingConfiguration : IEntityTypeConfiguration<CarListin
         b.Property(x => x.RawBrand).HasMaxLength(60).HasComment("برند خام");
         b.Property(x => x.RawModel).HasMaxLength(60).HasComment("مدل خام");
         b.Property(x => x.RawTrim).HasMaxLength(80).HasComment("تریم خام");
+        b.Property(x => x.SourceModelKey).HasMaxLength(120).HasComment("شناسه‌ی قطعیِ مدل در منبع (brand_model دیوار)؛ مبنای نگاشت/رجیستر خودکار");
         b.Property(x => x.ModelYear).HasComment("سال مدل");
         b.Property(x => x.MileageKm).HasComment("کارکرد (کیلومتر)؛ NULL=صفر/نامشخص");
         b.Property(x => x.Color).HasMaxLength(40).HasComment("رنگ خودرو");

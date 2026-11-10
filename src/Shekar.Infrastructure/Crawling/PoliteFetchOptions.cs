@@ -24,8 +24,14 @@ public sealed class PoliteFetchOptions
     /// <summary>بیشینه‌ی تعداد صفحه‌ی لیست در هر پاس (فقط آگهی‌های تازه).</summary>
     public int MaxPagesPerRun { get; set; } = 2;
 
-    /// <summary>بیشینه‌ی کل درخواست در هر پاس (سقف بودجه).</summary>
-    public int MaxRequestsPerRun { get; set; } = 6;
+    /// <summary>
+    /// بیشینه‌ی تعداد فچِ صفحه‌ی جزئیات در هر پاس (مرحله ۲). فقط برای آگهی‌های جدید؛
+    /// در حالت پایدار معمولاً بسیار کمتر از این مقدار است.
+    /// </summary>
+    public int MaxDetailFetchesPerRun { get; set; } = 20;
+
+    /// <summary>بیشینه‌ی کل درخواست در هر پاس (سقف بودجه؛ شامل لیست + جزئیات).</summary>
+    public int MaxRequestsPerRun { get; set; } = 30;
 
     /// <summary>مهلت هر درخواست (ثانیه).</summary>
     public int RequestTimeoutSeconds { get; set; } = 25;

@@ -364,6 +364,7 @@ CREATE TABLE dbo.VehicleModels (
     Brand          NVARCHAR(60)  NOT NULL,                        -- برند، مثل «پژو»
     Model          NVARCHAR(60)  NOT NULL,                        -- مدل، مثل «۲۰۷»
     Trim           NVARCHAR(80)  NULL,                            -- تریم/تیپ، مثل «دستی پانوراما»
+    DivarKey       NVARCHAR(120) NULL,                            -- شناسه‌ی قطعیِ مدل در دیوار (brand_model)؛ یکتا؛ مبنای رجیستر خودکار
     BodyType       NVARCHAR(40)  NULL,                            -- نوع بدنه: هاچ‌بک/سدان/شاسی‌بلند
     LiquidityScore INT           NOT NULL CONSTRAINT DF_VM_Liq DEFAULT(50), -- نقدشوندگی دستی ۰..۱۰۰ (سرعت فروش)
     Aliases        NVARCHAR(MAX) NULL,                            -- نام‌های مستعار برای تطبیق متن آگهی (JSON)
@@ -374,6 +375,8 @@ CREATE TABLE dbo.VehicleModels (
     CONSTRAINT CK_VM_Liquidity CHECK (LiquidityScore BETWEEN 0 AND 100)
 );
 CREATE INDEX IX_VehicleModels_Brand_Model_Trim ON dbo.VehicleModels(Brand, Model, Trim);
+-- نگاشتِ قطعی از شناسه‌ی منبع؛ یکتا میان مقادیر غیرتهی (مبنای رجیستر خودکار مدل).
+CREATE UNIQUE INDEX IX_VehicleModels_DivarKey ON dbo.VehicleModels(DivarKey) WHERE DivarKey IS NOT NULL;
 GO
 
 /* ---------------------------------------------- آگهی‌های خام کراول‌شده */
@@ -388,6 +391,7 @@ CREATE TABLE dbo.CarListings (
     RawBrand        NVARCHAR(60)   NULL,                          -- برند خام
     RawModel        NVARCHAR(60)   NULL,                          -- مدل خام
     RawTrim         NVARCHAR(80)   NULL,                          -- تریم خام
+    SourceModelKey  NVARCHAR(120)  NULL,                          -- شناسه‌ی قطعیِ مدل در منبع (brand_model دیوار)؛ مبنای نگاشت/رجیستر خودکار
     ModelYear       INT            NULL,                          -- سال مدل
     MileageKm       INT            NULL,                          -- کارکرد (کیلومتر)؛ NULL=صفر/نامشخص
     Color           NVARCHAR(40)   NULL,                          -- رنگ خودرو
