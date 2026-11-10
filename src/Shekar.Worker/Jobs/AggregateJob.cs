@@ -31,9 +31,18 @@ public sealed class AggregateJob : IJob
         using IServiceScope scope = _scopeFactory.CreateScope();
         IServiceProvider sp = scope.ServiceProvider;
 
-        int matched = await sp.GetRequiredService<IVehicleNormalizationService>().RunAsync(normalizeBatch, ct);
+        NormalizationResult norm = await sp.GetRequiredService<IVehicleNormalizationService>().RunAsync(normalizeBatch, ct);
         int segments = await sp.GetRequiredService<IMarketAggregationService>().RunAsync(windowDays, ct);
 
-        _logger.LogInformation("اگریگیشن: نرمال‌سازی {Matched} آگهی، ساخت {Segments} سگمنت بازار", matched, segments);
+        _logger.LogInformation(
+            "اگریگیشن: نرمال‌سازی {Matched} آگهی (رجیستر خودکار {Auto})، بی‌تطبیق {Unmatched}، ساخت {Segments} سگمنت بازار",
+            norm.Matched, norm.AutoRegistered, norm.Unmatched, segments);
+
+        if (norm.UnmatchedSamples.Count > 0)
+        {
+            _logger.LogWarning(
+                "پوشش: {Count} آگهی بی‌تطبیق ماند (نمونه): {Samples}",
+                norm.Unmatched, string.Join(" | ", norm.UnmatchedSamples));
+        }
     }
 }

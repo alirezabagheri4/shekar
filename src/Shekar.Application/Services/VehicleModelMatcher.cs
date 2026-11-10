@@ -6,13 +6,17 @@ namespace Shekar.Application.Services;
 /// <summary>نگاشت متن یک آگهی به یک مدل کاتالوگ (VehicleModel).</summary>
 public interface IVehicleModelMatcher
 {
-    /// <summary>بهترین مدلِ منطبق را برمی‌گرداند یا <c>null</c> اگر تطبیقی نبود.</summary>
+    /// <summary>بهترین مدلِ منطبق را برمی‌گرداند یا <c>null</c> اگر تطبیقِ معتبری نبود.</summary>
     int? Match(CarListing listing, IReadOnlyList<VehicleModel> catalog);
 }
 
 /// <summary>
-/// تطبیق هیوریستیک: متن آگهی (برند/مدل/تریم/عنوان) را نرمال می‌کند و با برند+مدل (+تریم)
-/// و نام‌های مستعار هر مدل مقایسه می‌کند. تریم‌دارترین و دقیق‌ترین تطبیق را برمی‌گزیند.
+/// تطبیقِ هیوریستیکِ fallback (برای آگهی‌هایی که کلیدِ قطعیِ منبع ندارند). متن آگهی را نرمال
+/// می‌کند و با برند/مدل/تریم و نام‌های مستعار مقایسه می‌کند، اما:
+/// • تطبیق با <b>مرزِ کلمه</b> انجام می‌شود تا «۲۰۶» با «۲۰۶۱»/«۱۲۰۶» یا داخلِ اعداد دیگر اشتباه نشود؛
+/// • تطبیقِ <b>مدل</b> (یا alias همراه تریم) لازم است؛ تطبیقِ صرفِ alias یا برند کافی نیست؛
+/// • دقیق‌ترین/تریم‌دارترین گزینه انتخاب می‌شود و در ابهام، <c>null</c> برمی‌گردد.
+/// هیچ مدلی نمی‌سازد؛ فقط به مدل‌های موجود نگاشت می‌دهد (منبعِ هویت، رجیستر خودکارِ قطعی است).
 /// </summary>
 public sealed class VehicleModelMatcher : IVehicleModelMatcher
 {
@@ -34,25 +38,21 @@ public sealed class VehicleModelMatcher : IVehicleModelMatcher
             string model = TextNormalizer.Normalize(vm.Model);
             string trim = TextNormalizer.Normalize(vm.Trim);
 
-            bool modelHit = model.Length > 0 && haystack.Contains(model, StringComparison.Ordinal);
-            bool brandHit = brand.Length == 0 || haystack.Contains(brand, StringComparison.Ordinal);
-            bool trimHit = trim.Length > 0 && haystack.Contains(trim, StringComparison.Ordinal);
-            bool aliasHit = vm.Aliases.Any(a =>
-            {
-                string na = TextNormalizer.Normalize(a);
-                return na.Length > 0 && haystack.Contains(na, StringComparison.Ordinal);
-            });
+            bool modelHit = ContainsWord(haystack, model);
+            bool brandHit = brand.Length == 0 || ContainsWord(haystack, brand);
+            bool trimHit = ContainsWord(haystack, trim);
+            bool aliasHit = vm.Aliases.Any(a => ContainsWord(haystack, TextNormalizer.Normalize(a)));
 
-            int score = 0;
-            if (modelHit)
+            // شرطِ اعتماد: یا مدل مستقیماً هست، یا alias همراهِ تریم (نه alias/برندِ تنها).
+            bool qualifies = modelHit || (aliasHit && trimHit);
+            if (!qualifies)
             {
-                // تطبیق مدل کافی است (برند در آگهی‌ها اغلب حذف می‌شود)؛ برند/تریم/طولِ مدل امتیاز بیشتر.
-                score = 2 + (brandHit ? 1 : 0) + (trimHit ? 2 : 0) + model.Length;
+                continue;
             }
-            else if (aliasHit)
-            {
-                score = 1 + (trimHit ? 1 : 0);
-            }
+
+            int score = modelHit
+                ? 3 + (brandHit ? 1 : 0) + (trimHit ? 2 : 0) + model.Length
+                : 2 + (trimHit ? 1 : 0); // مسیرِ alias+trim
 
             if (score > bestScore)
             {
@@ -63,4 +63,29 @@ public sealed class VehicleModelMatcher : IVehicleModelMatcher
 
         return bestId;
     }
+
+    /// <summary>آیا <paramref name="needle"/> به‌صورت یک «کلمه‌ی کامل» در haystack هست (نه داخلِ کلمه/عددِ بزرگ‌تر).</summary>
+    private static bool ContainsWord(string haystack, string needle)
+    {
+        if (string.IsNullOrEmpty(needle))
+        {
+            return false;
+        }
+
+        int idx = 0;
+        while ((idx = haystack.IndexOf(needle, idx, StringComparison.Ordinal)) >= 0)
+        {
+            bool leftOk = idx == 0 || !IsWordChar(haystack[idx - 1]);
+            int end = idx + needle.Length;
+            bool rightOk = end == haystack.Length || !IsWordChar(haystack[end]);
+            if (leftOk && rightOk)
+            {
+                return true;
+            }
+            idx = end;
+        }
+        return false;
+    }
+
+    private static bool IsWordChar(char c) => char.IsLetterOrDigit(c);
 }

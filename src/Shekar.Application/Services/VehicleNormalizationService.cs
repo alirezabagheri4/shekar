@@ -3,11 +3,15 @@ using Shekar.Domain.Entities;
 
 namespace Shekar.Application.Services;
 
+/// <summary>نتیجه‌ی یک پاس نرمال‌سازی (برای پایشِ پوشش).</summary>
+public sealed record NormalizationResult(
+    int Matched, int AutoRegistered, int Unmatched, IReadOnlyList<string> UnmatchedSamples);
+
 /// <summary>نرمال‌سازی آگهی‌های خام: نگاشت به VehicleModelId.</summary>
 public interface IVehicleNormalizationService
 {
-    /// <summary>تا سقف مشخص، آگهی‌های نرمال‌نشده را تطبیق/رجیستر می‌دهد و تعداد تطبیق‌شده را برمی‌گرداند.</summary>
-    Task<int> RunAsync(int maxBatch, CancellationToken ct = default);
+    /// <summary>تا سقف مشخص، آگهی‌های نرمال‌نشده را تطبیق/رجیستر می‌دهد و آمارِ پوشش را برمی‌گرداند.</summary>
+    Task<NormalizationResult> RunAsync(int maxBatch, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -33,12 +37,12 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
         _matcher = matcher;
     }
 
-    public async Task<int> RunAsync(int maxBatch, CancellationToken ct = default)
+    public async Task<NormalizationResult> RunAsync(int maxBatch, CancellationToken ct = default)
     {
         IReadOnlyList<CarListing> pending = await _listings.ListUnmatchedAsync(maxBatch, ct);
         if (pending.Count == 0)
         {
-            return 0;
+            return new NormalizationResult(0, 0, 0, Array.Empty<string>());
         }
 
         // کاتالوگِ فعلی را به‌عنوان کش بارگذاری می‌کنیم؛ مدل‌های خودکار در همین پاس به آن افزوده می‌شوند.
@@ -48,7 +52,8 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
             .GroupBy(m => m.DivarKey!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
-        int matched = 0;
+        int matched = 0, autoRegistered = 0;
+        var unmatchedSamples = new List<string>();
 
         foreach (CarListing listing in pending)
         {
@@ -56,15 +61,19 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
 
             int? vmId = null;
 
-            // (۱) مسیر قطعی: شناسه‌ی منبع.
+            // (۱) مسیر قطعی: شناسه‌ی منبع → یافتن یا رجیستر خودکار.
             if (!string.IsNullOrWhiteSpace(listing.SourceModelKey))
             {
-                VehicleModel model = await ResolveOrCreateAsync(listing, byDivarKey, catalog, ct);
+                (VehicleModel model, bool created) = await ResolveOrCreateAsync(listing, byDivarKey, catalog, ct);
                 vmId = model.Id;
+                if (created)
+                {
+                    autoRegistered++;
+                }
             }
             else if (catalog.Count > 0)
             {
-                // (۲) مسیر هیوریستیک: تطبیق متن با کاتالوگ.
+                // (۲) مسیر هیوریستیک: تطبیق متن با مدل‌های موجود (fallback؛ چیزی نمی‌سازد).
                 vmId = _matcher.Match(listing, catalog);
             }
 
@@ -74,19 +83,24 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
                 await _listings.UpdateAsync(listing, ct);
                 matched++;
             }
+            else if (unmatchedSamples.Count < 20)
+            {
+                // آگهیِ بی‌تطبیق (نه کلیدِ قطعی داشت نه با کاتالوگ خورد) — برای دیدِ شکافِ پوشش.
+                unmatchedSamples.Add(listing.Title);
+            }
         }
 
-        return matched;
+        return new NormalizationResult(matched, autoRegistered, pending.Count - matched, unmatchedSamples);
     }
 
-    private async Task<VehicleModel> ResolveOrCreateAsync(
+    private async Task<(VehicleModel Model, bool Created)> ResolveOrCreateAsync(
         CarListing listing, Dictionary<string, VehicleModel> byDivarKey, List<VehicleModel> catalog, CancellationToken ct)
     {
         string key = listing.SourceModelKey!.Trim();
 
         if (byDivarKey.TryGetValue(key, out VehicleModel? cached))
         {
-            return cached;
+            return (cached, false);
         }
 
         VehicleModel? existing = await _models.GetByDivarKeyAsync(key, ct);
@@ -94,7 +108,7 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
         {
             byDivarKey[key] = existing;
             catalog.Add(existing);
-            return existing;
+            return (existing, false);
         }
 
         // رجیستر خودکار: برند/مدل/تریم از دادهٔ آگهی، نقدشوندگیِ پیش‌فرض تا تنظیمِ ادمین.
@@ -113,6 +127,6 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
         VehicleModel saved = await _models.AddAsync(created, ct);
         byDivarKey[key] = saved;
         catalog.Add(saved);
-        return saved;
+        return (saved, true);
     }
 }

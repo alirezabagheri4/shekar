@@ -42,4 +42,21 @@ public class VehicleModelMatcherTests
         var listing = new CarListing { RawBrand = "پژو", RawModel = "۲۰۷", Title = "فروش پژو ۲۰۷" };
         Assert.Equal(1, _matcher.Match(listing, Catalog));
     }
+
+    [Fact]
+    public void Match_ReturnsNull_WhenOnlyBrandMatches()
+    {
+        // فقط برند (بدون مدل/تریم) → تطبیقِ معتبر نیست.
+        var listing = new CarListing { Title = "پژو فروش فوری بدون رنگ" };
+        Assert.Null(_matcher.Match(listing, Catalog));
+    }
+
+    [Theory]
+    [InlineData("خودرو با کد 2061 نو")]   // «2061» نباید «206» را فعال کند
+    [InlineData("پلاک 1206 تهران")]        // «1206» نباید «206» را فعال کند
+    public void Match_RespectsWordBoundary_ForNumericModels(string title)
+    {
+        var listing = new CarListing { Title = title };
+        Assert.Null(_matcher.Match(listing, Catalog));
+    }
 }
