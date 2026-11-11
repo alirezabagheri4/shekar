@@ -442,6 +442,7 @@ CREATE TABLE dbo.MarketSegmentStats (
     SpreadPercent     INT            NOT NULL,                    -- پراکندگیِ نسبی IQR÷میانه (٪)
     RefMileageKm      INT            NOT NULL,                    -- کارکردِ مرجع (میانه)؛ مبنای تعدیلِ کارکرد
     MileageSlopeTomanPerK BIGINT     NOT NULL,                    -- شیبِ قیمت به‌ازای هر ۱۰۰۰ کیلومتر (معمولاً منفی)
+    TrendPercent      INT            NOT NULL,                    -- روندِ قیمتِ پنجره (٪): مثبت=صعودی، منفی=نزولی
     IsReliable        BIT            NOT NULL,                    -- آیا سگمنت قابل‌اتکاست
     WindowDays        INT            NOT NULL,                    -- طول پنجره‌ی نمونه‌گیری (روز)
     ComputedAt        DATETIMEOFFSET NOT NULL,                    -- زمان آخرین محاسبه

@@ -74,6 +74,92 @@ public static class Statistics
             SampleCount: kept.Length);
     }
 
+    /// <summary>
+    /// مثلِ <see cref="Summarize"/> ولی با وزنِ هر نمونه (برای وزن‌دهیِ زمانی): پرت‌ها با IQR
+    /// (بدونِ وزن، روی قیمت) کنار می‌روند، سپس میانه/چارک‌ها به‌صورتِ «وزنیِ پله‌ای» و میانگینِ وزنی
+    /// حساب می‌شوند. با وزنِ یکسان، به میانه‌ی معمول تقلیل می‌یابد.
+    /// </summary>
+    public static PriceStats WeightedSummarize(IReadOnlyList<(long Price, double Weight)> pairs, int minCountToTrim = 8)
+    {
+        if (pairs.Count == 0)
+        {
+            return new PriceStats(0, 0, 0, 0, 0, 0, 0);
+        }
+
+        (long Price, double Weight)[] sorted = pairs.OrderBy(p => p.Price).ToArray();
+        (int start, int end) = TrimBounds(sorted, minCountToTrim);
+
+        double total = 0, weightedSum = 0;
+        for (int i = start; i <= end; i++)
+        {
+            total += sorted[i].Weight;
+            weightedSum += sorted[i].Weight * sorted[i].Price;
+        }
+
+        long mean = total > 0 ? (long)Math.Round(weightedSum / total) : sorted[start].Price;
+        return new PriceStats(
+            Min: sorted[start].Price,
+            P25: WeightedPercentile(sorted, start, end, total, 25),
+            Median: WeightedPercentile(sorted, start, end, total, 50),
+            Average: mean,
+            P75: WeightedPercentile(sorted, start, end, total, 75),
+            Max: sorted[end].Price,
+            SampleCount: end - start + 1);
+    }
+
+    /// <summary>کوچک‌ترین قیمتی که وزنِ تجمعی‌اش به <paramref name="percentile"/>٪ از کلِ وزن برسد.</summary>
+    private static long WeightedPercentile((long Price, double Weight)[] sorted, int start, int end, double total, double percentile)
+    {
+        if (total <= 0)
+        {
+            return sorted[start].Price;
+        }
+        double target = percentile / 100.0 * total;
+        double cum = 0;
+        for (int i = start; i <= end; i++)
+        {
+            cum += sorted[i].Weight;
+            if (cum >= target)
+            {
+                return sorted[i].Price;
+            }
+        }
+        return sorted[end].Price;
+    }
+
+    /// <summary>مرزهای برشِ IQR (۱.۵×) روی آرایه‌ی مرتب‌شده‌ی زوج‌ها؛ با محافظِ بیش‌ازحد-تریم.</summary>
+    private static (int Start, int End) TrimBounds((long Price, double Weight)[] sorted, int minCountToTrim)
+    {
+        int n = sorted.Length;
+        if (n < minCountToTrim)
+        {
+            return (0, n - 1);
+        }
+
+        long[] prices = new long[n];
+        for (int i = 0; i < n; i++)
+        {
+            prices[i] = sorted[i].Price;
+        }
+
+        long q1 = PercentileSorted(prices, 25), q3 = PercentileSorted(prices, 75);
+        long iqr = q3 - q1;
+        if (iqr <= 0)
+        {
+            return (0, n - 1);
+        }
+
+        long fence = (long)(1.5 * iqr);
+        long lo = q1 - fence, hi = q3 + fence;
+        int start = 0;
+        while (start < n && sorted[start].Price < lo) start++;
+        int end = n - 1;
+        while (end >= start && sorted[end].Price > hi) end--;
+
+        int kept = end - start + 1;
+        return kept < Math.Max(3, n / 2) ? (0, n - 1) : (start, end);
+    }
+
     private static long[] SortedCopy(IReadOnlyList<long> values)
     {
         long[] arr = values.ToArray();

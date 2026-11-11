@@ -33,7 +33,9 @@ public sealed class ScoreJob : IJob
             MinScore = _config.GetValue<int?>("Score:MinScore") ?? 60,
             MinSamples = _config.GetValue<int?>("Score:MinSamples") ?? 3,
             SuspiciousBelowMarketPercent = _config.GetValue<int?>("Score:SuspiciousBelowMarketPercent") ?? 40,
-            ConfidenceFullAtSamples = _config.GetValue<int?>("Score:ConfidenceFullAtSamples") ?? 5
+            ConfidenceFullAtSamples = _config.GetValue<int?>("Score:ConfidenceFullAtSamples") ?? 5,
+            RisingMarketTrendPercent = _config.GetValue<int?>("Score:RisingMarketTrendPercent") ?? 5,
+            RisingMarketExtraMarginPercent = _config.GetValue<int?>("Score:RisingMarketExtraMarginPercent") ?? 3
         };
 
         using IServiceScope scope = _scopeFactory.CreateScope();

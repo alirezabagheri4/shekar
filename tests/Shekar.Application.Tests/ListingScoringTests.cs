@@ -95,6 +95,33 @@ public class ListingScoringTests
         });
     }
 
+    private void AddSegmentWithTrend(CarListing listing, long median, int samples, int trendPercent)
+    {
+        var model = _store.VehicleModels.First(m => m.Id == 1);
+        string key = SegmentKey.ForListing(listing, model)!;
+        _store.MarketSegmentStats.Add(new MarketSegmentStat
+        {
+            Id = _store.MarketSegmentStats.Select(s => s.Id).DefaultIfEmpty(0).Max() + 1,
+            SegmentKey = key, Level = 0, VehicleModelId = 1, ModelYear = 1402,
+            MileageBucket = MileageBucket.To20k, BodyCondition = BodyCondition.Healthy,
+            SampleCount = samples, MedianPriceToman = median, TrendPercent = trendPercent, ComputedAt = _clock.UtcNow
+        });
+    }
+
+    [Fact]
+    public async Task RisingMarket_RequiresLargerMargin_SoMarginalBargainDoesNotQualify()
+    {
+        // همان آگهیِ ۱۴٪ زیرِ بازار که عادتاً سطح می‌شود؛ ولی در بازارِ صعودی با حاشیه‌ی اضافیِ ۲۰٪ نه.
+        var listing = AddListing(1_340_000_000);
+        AddSegmentWithTrend(listing, median: 1_560_000_000, samples: 8, trendPercent: 10);
+
+        var options = new ScoringOptions { RisingMarketTrendPercent = 5, RisingMarketExtraMarginPercent = 20 };
+        ScoringRunResult r = await Build().RunAsync(options, windowHours: 48);
+
+        Assert.Equal(1, r.Evaluated);
+        Assert.Equal(0, r.Qualified); // احتیاطِ بازارِ صعودی
+    }
+
     [Fact]
     public async Task HighMileageCar_BelowRawMedian_DoesNotQualify_AfterMileageAdjustment()
     {

@@ -28,6 +28,15 @@ public sealed record ScoringOptions
     /// <summary>تعداد نمونه‌ای که مؤلفه‌ی اطمینان را کامل می‌کند (۵ نمونه → ۱۰۰).</summary>
     public int ConfidenceFullAtSamples { get; init; } = 5;
 
+    /// <summary>روندِ صعودیِ قابل‌توجه (٪)؛ بالاتر از آن، بازار رو به رشد است و احتیاطِ بیشتری لازم است.</summary>
+    public int RisingMarketTrendPercent { get; init; } = 5;
+
+    /// <summary>
+    /// حاشیه‌ی زیربازاریِ اضافیِ لازم در بازارِ صعودی. در بازارِ رو به رشد، آگهیِ کمی‌زیرِبازار ممکن است
+    /// فقط یک آگهیِ عقب‌مانده باشد؛ پس برای واجد شرایط شدن، زیربازاریِ بیشتری می‌طلبیم.
+    /// </summary>
+    public int RisingMarketExtraMarginPercent { get; init; } = 3;
+
     public double PriceWeight { get; init; } = 0.55;
     public double LiquidityWeight { get; init; } = 0.35;
     public double ConfidenceWeight { get; init; } = 0.10;
@@ -69,8 +78,11 @@ public sealed class HuntScorer : IHuntScorer
         bool suspicious = belowPct >= o.SuspiciousBelowMarketPercent;
         bool golden = score >= DomainConstants.GoldenScoreThreshold && !suspicious;
 
+        // در بازارِ صعودی، حاشیه‌ی زیربازاریِ بیشتری می‌طلبیم (احتیاط در برابر آگهیِ عقب‌مانده).
+        int extraMargin = segment.TrendPercent >= o.RisingMarketTrendPercent ? o.RisingMarketExtraMarginPercent : 0;
+
         bool qualifies = !suspicious
-            && belowPct >= o.MinBelowMarketPercent
+            && belowPct >= o.MinBelowMarketPercent + extraMargin
             && segment.SampleCount >= o.MinSamples
             && score >= o.MinScore;
 

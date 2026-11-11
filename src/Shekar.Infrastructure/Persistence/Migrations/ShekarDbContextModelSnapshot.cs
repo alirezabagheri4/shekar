@@ -752,6 +752,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("int")
                         .HasComment("پراکندگیِ نسبی IQR÷میانه (٪)");
 
+                    b.Property<int>("TrendPercent")
+                        .HasColumnType("int")
+                        .HasComment("روندِ قیمتِ پنجره (٪): مثبت=صعودی، منفی=نزولی");
+
                     b.Property<int>("VehicleModelId")
                         .HasColumnType("int")
                         .HasComment("مدل خودرو");

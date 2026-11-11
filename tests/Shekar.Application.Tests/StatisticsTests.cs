@@ -79,4 +79,24 @@ public class StatisticsTests
         var points = new (double X, double Y)[] { (50_000, 1_000), (50_000, 2_000) };
         Assert.Equal(0, Statistics.Slope(points));
     }
+
+    [Fact]
+    public void WeightedSummarize_LeansToHeavilyWeightedValues()
+    {
+        // سه نمونه‌ی کم‌وزن (۱۰۰۰) و یک نمونه‌ی پروزن (۲۰۰۰) → میانه‌ی وزنی به سمتِ پروزن.
+        var pairs = new (long Price, double Weight)[]
+        {
+            (1_000, 1), (1_000, 1), (1_000, 1), (2_000, 5)
+        };
+        PriceStats s = Statistics.WeightedSummarize(pairs);
+        Assert.Equal(2_000, s.Median); // با وزنِ یکسان ۱۰۰۰ می‌شد
+        Assert.Equal(4, s.SampleCount);
+    }
+
+    [Fact]
+    public void WeightedSummarize_EqualWeights_MatchesPlainMedian_OddCount()
+    {
+        var pairs = new (long Price, double Weight)[] { (1_000, 1), (1_200, 1), (1_400, 1) };
+        Assert.Equal(1_200, Statistics.WeightedSummarize(pairs).Median);
+    }
 }

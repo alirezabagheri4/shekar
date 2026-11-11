@@ -109,6 +109,7 @@ public sealed class MarketSegmentStatConfiguration : IEntityTypeConfiguration<Ma
         b.Property(x => x.SpreadPercent).HasComment("پراکندگیِ نسبی IQR÷میانه (٪)");
         b.Property(x => x.RefMileageKm).HasComment("کارکردِ مرجع (میانه‌ی نمونه)؛ مبنای تعدیلِ کارکرد");
         b.Property(x => x.MileageSlopeTomanPerK).HasComment("شیبِ قیمت به‌ازای هر ۱۰۰۰ کیلومتر (تومان، معمولاً منفی)");
+        b.Property(x => x.TrendPercent).HasComment("روندِ قیمتِ پنجره (٪): مثبت=صعودی، منفی=نزولی");
         b.Property(x => x.IsReliable).HasComment("آیا سگمنت قابل‌اتکاست (نمونه‌ی کافی + پراکندگیِ محدود + تازه)");
         b.Property(x => x.WindowDays).HasComment("طول پنجره‌ی نمونه‌گیری (روز)");
         b.Property(x => x.ComputedAt).HasComment("زمان آخرین محاسبه");

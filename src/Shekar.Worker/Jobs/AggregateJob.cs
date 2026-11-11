@@ -31,7 +31,8 @@ public sealed class AggregateJob : IJob
         var aggOptions = new AggregationOptions
         {
             MinReliableSamples = _config.GetValue<int?>("Aggregate:MinReliableSamples") ?? 5,
-            MaxReliableSpreadPercent = _config.GetValue<int?>("Aggregate:MaxReliableSpreadPercent") ?? 60
+            MaxReliableSpreadPercent = _config.GetValue<int?>("Aggregate:MaxReliableSpreadPercent") ?? 60,
+            RecencyHalfLifeDays = _config.GetValue<double?>("Aggregate:RecencyHalfLifeDays") ?? 14
         };
 
         using IServiceScope scope = _scopeFactory.CreateScope();

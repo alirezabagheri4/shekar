@@ -76,6 +76,27 @@ public class MarketAggregationTests
     }
 
     [Fact]
+    public async Task Aggregate_ComputesPositiveTrend_WhenRecentPricesHigher()
+    {
+        // نیمه‌ی تازه گران‌تر از نیمه‌ی قدیمی → روندِ صعودی.
+        for (int i = 0; i < 3; i++)
+        {
+            AddListing(1, 1402, 10_000, 1_500_000_000, BodyCondition.Healthy, null); // تازه
+            AddListing(1, 1402, 10_000, 1_200_000_000, BodyCondition.Healthy, null); // قدیمی
+        }
+        foreach (var l in _store.CarListings.Where(l => l.PriceToman == 1_200_000_000))
+        {
+            l.LastSeenAt = _clock.UtcNow.AddDays(-20);
+        }
+
+        await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        // همه در یک سگمنتِ L0؛ روند روی آن مُهر می‌شود.
+        var stat = _store.MarketSegmentStats.First(s => s.Level == 0);
+        Assert.True(stat.TrendPercent > 0);
+    }
+
+    [Fact]
     public async Task Aggregate_ComputesNegativeMileageSlope_AtModelYearLevel()
     {
         // قیمت با کارکرد پایین می‌آید؛ چند باکتِ کارکرد → سطحِ L3 با شیبِ منفی و کارکردِ مرجع.

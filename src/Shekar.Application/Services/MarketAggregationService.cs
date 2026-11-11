@@ -14,6 +14,12 @@ public sealed record AggregationOptions
 
     /// <summary>بیشینه‌ی پراکندگیِ نسبی (٪) برای «قابل‌اتکا» بودن؛ بالاتر از آن بازار پراکنده و نامطمئن است.</summary>
     public int MaxReliableSpreadPercent { get; init; } = 60;
+
+    /// <summary>
+    /// نیمه‌عمرِ وزنِ زمانی (روز): داده‌ای که این‌قدر پیش «آخرین‌بار دیده» شده نصفِ وزن می‌گیرد.
+    /// قیمتِ زنده‌ی امروز وزنِ کامل؛ آگهیِ حذف‌شده‌ی قدیمی کم‌رنگ. در بازارِ تورمی مرجع را به‌روز نگه می‌دارد.
+    /// </summary>
+    public double RecencyHalfLifeDays { get; init; } = 14;
 }
 
 /// <summary>نتیجه‌ی یک پاس اگریگیشن (برای پایش).</summary>
@@ -95,24 +101,27 @@ public sealed class MarketAggregationService : IMarketAggregationService
 
             long price = l.PriceToman;
             int mileage = l.MileageKm ?? 0;
+            double ageDays = Math.Max(0, (now - l.LastSeenAt).TotalDays); // تازگی بر پایه‌ی آخرین‌دیده‌شدن
             string k1 = SegmentKey.BuildL1(vmId, year, bucket, l.BodyCondition);
             string k2 = SegmentKey.BuildL2(vmId, year, bucket);
             string k3 = SegmentKey.BuildL3(vmId, year);
 
-            Accumulate(l0, l0Key, 0, vmId, year, bucket, l.BodyCondition, colorKey, price, mileage, source: l0Key);
+            Accumulate(l0, l0Key, 0, vmId, year, bucket, l.BodyCondition, colorKey, price, mileage, ageDays, source: l0Key);
             // L1 رنگ‌ها را در یک بدنه ادغام می‌کند (منبعِ تمایز = کلیدِ دقیق/رنگ).
-            Accumulate(l1, k1, 1, vmId, year, bucket, l.BodyCondition, null, price, mileage, source: l0Key);
+            Accumulate(l1, k1, 1, vmId, year, bucket, l.BodyCondition, null, price, mileage, ageDays, source: l0Key);
             // L2 بدنه‌ها را ادغام می‌کند (منبعِ تمایز = کلیدِ L1/بدنه).
-            Accumulate(l2, k2, 2, vmId, year, bucket, BodyCondition.Unknown, null, price, mileage, source: k1);
+            Accumulate(l2, k2, 2, vmId, year, bucket, BodyCondition.Unknown, null, price, mileage, ageDays, source: k1);
             // L3 کارکردها را گرد می‌آورد (منبعِ تمایز = کلیدِ L2/باکتِ کارکرد).
-            Accumulate(l3, k3, 3, vmId, year, bucket, BodyCondition.Unknown, null, price, mileage, source: k2);
+            Accumulate(l3, k3, 3, vmId, year, bucket, BodyCondition.Unknown, null, price, mileage, ageDays, source: k2);
         }
 
-        // شیبِ قیمت↔کارکرد در سطحِ (مدل+سال) از استخرِ L3؛ روی همه‌ی سطوحِ همان مدل+سال مُهر می‌شود.
+        // شیب و روند در سطحِ (مدل+سال) از استخرِ L3؛ روی همه‌ی سطوحِ همان مدل+سال مُهر می‌شوند.
         var slopeByL3 = new Dictionary<string, long>(StringComparer.Ordinal);
+        var trendByL3 = new Dictionary<string, int>(StringComparer.Ordinal);
         foreach (LevelAccumulator acc in l3.Values)
         {
             slopeByL3[acc.Key] = ComputeMileageSlopePerK(acc, options);
+            trendByL3[acc.Key] = ComputeTrendPercent(acc, options);
         }
 
         var currentKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -120,12 +129,14 @@ public sealed class MarketAggregationService : IMarketAggregationService
 
         long SlopeFor(LevelAccumulator acc) =>
             slopeByL3.TryGetValue(SegmentKey.BuildL3(acc.VehicleModelId, acc.Year), out long sl) ? sl : 0;
+        int TrendFor(LevelAccumulator acc) =>
+            trendByL3.TryGetValue(SegmentKey.BuildL3(acc.VehicleModelId, acc.Year), out int tr) ? tr : 0;
 
         // L0 همیشه ذخیره می‌شود.
         foreach (LevelAccumulator acc in l0.Values)
         {
             ct.ThrowIfCancellationRequested();
-            if (await PersistAsync(acc, SlopeFor(acc), options, now, windowDays, ct))
+            if (await PersistAsync(acc, SlopeFor(acc), TrendFor(acc), options, now, windowDays, ct))
             {
                 reliable++;
             }
@@ -140,7 +151,7 @@ public sealed class MarketAggregationService : IMarketAggregationService
             {
                 continue; // ادغامِ بی‌اثر؛ همتای ریزش کافی است
             }
-            if (await PersistAsync(acc, SlopeFor(acc), options, now, windowDays, ct))
+            if (await PersistAsync(acc, SlopeFor(acc), TrendFor(acc), options, now, windowDays, ct))
             {
                 reliable++;
             }
@@ -164,7 +175,7 @@ public sealed class MarketAggregationService : IMarketAggregationService
 
     private static void Accumulate(
         Dictionary<string, LevelAccumulator> map, string key, byte level, int vmId, int year,
-        MileageBucket bucket, BodyCondition body, string? colorKey, long price, int mileageKm, string source)
+        MileageBucket bucket, BodyCondition body, string? colorKey, long price, int mileageKm, double ageDays, string source)
     {
         if (!map.TryGetValue(key, out LevelAccumulator? acc))
         {
@@ -173,7 +184,37 @@ public sealed class MarketAggregationService : IMarketAggregationService
         }
         acc.Prices.Add(price);
         acc.Mileages.Add(mileageKm);
+        acc.AgeDays.Add(ageDays);
         acc.Sources.Add(source);
+    }
+
+    /// <summary>
+    /// روندِ قیمت (٪) در سطحِ (مدل+سال): میانه‌ی نیمه‌ی تازه در برابر نیمه‌ی قدیمی (تقسیم بر پایه‌ی سن).
+    /// مثبت=صعودی. اگر نمونه کم بود، ۰.
+    /// </summary>
+    private static int ComputeTrendPercent(LevelAccumulator pool, AggregationOptions options)
+    {
+        int n = pool.Prices.Count;
+        if (n < options.MinReliableSamples)
+        {
+            return 0;
+        }
+
+        int[] byAge = Enumerable.Range(0, n).OrderBy(i => pool.AgeDays[i]).ToArray(); // تازه‌ترین اول
+        int half = n / 2;
+        var recent = new List<long>(half);
+        var older = new List<long>(n - half);
+        for (int r = 0; r < n; r++)
+        {
+            (r < half ? recent : older).Add(pool.Prices[byAge[r]]);
+        }
+        if (recent.Count == 0 || older.Count == 0)
+        {
+            return 0;
+        }
+
+        long recentMed = Statistics.Median(recent), olderMed = Statistics.Median(older);
+        return olderMed > 0 ? (int)Math.Round((recentMed - olderMed) * 100.0 / olderMed) : 0;
     }
 
     /// <summary>
@@ -214,13 +255,20 @@ public sealed class MarketAggregationService : IMarketAggregationService
         return Math.Min(0, slopePerK);                        // قیمت با کارکرد بالا نمی‌رود
     }
 
-    /// <summary>آمارِ مقاومِ یک سگمنت را حساب و upsert می‌کند؛ <c>true</c> اگر قابل‌اتکا شد.</summary>
+    /// <summary>آمارِ مقاومِ وزن‌دارِ یک سگمنت را حساب و upsert می‌کند؛ <c>true</c> اگر قابل‌اتکا شد.</summary>
     private async Task<bool> PersistAsync(
-        LevelAccumulator acc, long mileageSlopePerK, AggregationOptions options,
+        LevelAccumulator acc, long mileageSlopePerK, int trendPercent, AggregationOptions options,
         DateTimeOffset now, int windowDays, CancellationToken ct)
     {
-        // پرت‌ها حذف و همه‌ی آماره‌ها با یک‌بار مرتب‌سازی حساب می‌شوند.
-        PriceStats s = Statistics.Summarize(acc.Prices);
+        // وزنِ زمانی (نیمه‌عمر): نمونه‌ی تازه‌تر وزنِ بیشتر. پرت‌ها حذف و آماره‌های وزنی حساب می‌شوند.
+        double halfLife = Math.Max(0.5, options.RecencyHalfLifeDays);
+        var weighted = new (long Price, double Weight)[acc.Prices.Count];
+        for (int i = 0; i < acc.Prices.Count; i++)
+        {
+            weighted[i] = (acc.Prices[i], Math.Pow(0.5, acc.AgeDays[i] / halfLife));
+        }
+
+        PriceStats s = Statistics.WeightedSummarize(weighted);
         bool isReliable = s.SampleCount >= options.MinReliableSamples
             && s.SpreadPercent <= options.MaxReliableSpreadPercent;
 
@@ -242,6 +290,7 @@ public sealed class MarketAggregationService : IMarketAggregationService
         stat.SpreadPercent = s.SpreadPercent;
         stat.RefMileageKm = MedianMileage(acc.Mileages);
         stat.MileageSlopeTomanPerK = mileageSlopePerK;
+        stat.TrendPercent = trendPercent;
         stat.IsReliable = isReliable;
         stat.WindowDays = windowDays;
         stat.ComputedAt = now;
@@ -261,6 +310,7 @@ public sealed class MarketAggregationService : IMarketAggregationService
     {
         public List<long> Prices { get; } = new();
         public List<int> Mileages { get; } = new();
+        public List<double> AgeDays { get; } = new();
         public HashSet<string> Sources { get; } = new(StringComparer.Ordinal);
     }
 }
