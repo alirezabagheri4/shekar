@@ -45,6 +45,16 @@ public sealed class MockCarListingRepository : ICarListingRepository
     }
 
     public Task UpdateAsync(CarListing listing, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task<int> CountActiveAsync(CancellationToken ct = default) =>
+        Task.FromResult(_store.CarListings.Count(l => l.State == ListingState.Active));
+
+    public Task<int> CountMatchedActiveAsync(CancellationToken ct = default) =>
+        Task.FromResult(_store.CarListings.Count(l => l.State == ListingState.Active && l.VehicleModelId != null));
+
+    public Task<int> CountSegmentableActiveAsync(CancellationToken ct = default) =>
+        Task.FromResult(_store.CarListings.Count(l =>
+            l.State == ListingState.Active && l.VehicleModelId != null && l.ModelYear != null));
 }
 
 public sealed class MockVehicleModelRepository : IVehicleModelRepository

@@ -2,6 +2,7 @@ using Shekar.Application.Abstractions;
 using Shekar.Application.Common;
 using Shekar.Domain;
 using Shekar.Domain.Entities;
+using Shekar.Domain.Enums;
 
 namespace Shekar.Application.Services;
 
@@ -61,7 +62,7 @@ public sealed class MarketAggregationService : IMarketAggregationService
                 continue;
             }
 
-            Domain.Enums.MileageBucket bucket = DomainConstants.ResolveMileageBucket(l.MileageKm);
+            MileageBucket bucket = DomainConstants.ResolveMileageBucket(l.MileageKm);
             string? colorKey = SegmentKey.ColorInKey(l.PriceToman, vm) ? TextNormalizer.Normalize(l.Color) : null;
             if (colorKey is { Length: 0 })
             {
@@ -79,9 +80,9 @@ public sealed class MarketAggregationService : IMarketAggregationService
         foreach (SegmentAccumulator acc in groups.Values)
         {
             ct.ThrowIfCancellationRequested();
-            // آمارِ مقاوم: پرت‌ها را پیش از محاسبه حذف می‌کنیم (میانه ذاتاً مقاوم است، اما
-            // میانگین/چارک‌ها نه). SampleCount = تعدادِ نمونه‌ی به‌کاررفته پس از تریم.
-            IReadOnlyList<long> prices = Statistics.TrimOutliers(acc.Prices);
+            // آمارِ مقاوم: پرت‌ها حذف و همه‌ی آماره‌ها با یک‌بار مرتب‌سازی حساب می‌شوند.
+            // SampleCount = تعدادِ نمونه‌ی به‌کاررفته پس از تریم.
+            PriceStats s = Statistics.Summarize(acc.Prices);
 
             MarketSegmentStat stat = await _stats.GetBySegmentKeyAsync(acc.Key, ct) ?? new MarketSegmentStat();
             stat.SegmentKey = acc.Key;
@@ -90,11 +91,11 @@ public sealed class MarketAggregationService : IMarketAggregationService
             stat.MileageBucket = acc.Bucket;
             stat.BodyCondition = acc.BodyCondition;
             stat.ColorKey = acc.ColorKey;
-            stat.SampleCount = prices.Count;
-            stat.MedianPriceToman = Statistics.Median(prices);
-            stat.AveragePriceToman = Statistics.Average(prices);
-            stat.P25PriceToman = Statistics.Percentile(prices, 25);
-            stat.P75PriceToman = Statistics.Percentile(prices, 75);
+            stat.SampleCount = s.SampleCount;
+            stat.MedianPriceToman = s.Median;
+            stat.AveragePriceToman = s.Average;
+            stat.P25PriceToman = s.P25;
+            stat.P75PriceToman = s.P75;
             stat.WindowDays = windowDays;
             stat.ComputedAt = now;
             await _stats.UpsertAsync(stat, ct);
@@ -103,20 +104,9 @@ public sealed class MarketAggregationService : IMarketAggregationService
         return groups.Count;
     }
 
-    private sealed class SegmentAccumulator
+    private sealed record SegmentAccumulator(
+        string Key, int VehicleModelId, int Year, MileageBucket Bucket, BodyCondition BodyCondition, string? ColorKey)
     {
-        public SegmentAccumulator(string key, int vmId, int year,
-            Domain.Enums.MileageBucket bucket, Domain.Enums.BodyCondition body, string? colorKey)
-        {
-            Key = key; VehicleModelId = vmId; Year = year; Bucket = bucket; BodyCondition = body; ColorKey = colorKey;
-        }
-
-        public string Key { get; }
-        public int VehicleModelId { get; }
-        public int Year { get; }
-        public Domain.Enums.MileageBucket Bucket { get; }
-        public Domain.Enums.BodyCondition BodyCondition { get; }
-        public string? ColorKey { get; }
         public List<long> Prices { get; } = new();
     }
 }

@@ -54,6 +54,7 @@ public class AdminController : Controller
         {
             StaleCrawlHours = _config.GetValue<int?>("Health:StaleCrawlHours") ?? 6,
             MinMatchRatePercent = _config.GetValue<int?>("Health:MinMatchRatePercent") ?? 50,
+            MinSegmentableOfMatchedPercent = _config.GetValue<int?>("Health:MinSegmentableOfMatchedPercent") ?? 60,
             MinListingsForRate = _config.GetValue<int?>("Health:MinListingsForRate") ?? 20,
             RecentRuns = _config.GetValue<int?>("Health:RecentRuns") ?? 10
         };

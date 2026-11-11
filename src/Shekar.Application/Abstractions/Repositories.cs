@@ -167,6 +167,15 @@ public interface ICarListingRepository
 
     Task<CarListing> AddAsync(CarListing listing, CancellationToken ct = default);
     Task UpdateAsync(CarListing listing, CancellationToken ct = default);
+
+    /// <summary>تعداد آگهی‌های فعال (همه‌ی منابع) — برای پایش، بدونِ بارگذاریِ ردیف‌ها.</summary>
+    Task<int> CountActiveAsync(CancellationToken ct = default);
+
+    /// <summary>تعداد آگهی‌های فعالِ نرمال‌شده (دارای مدل) — برای نرخِ تطبیق.</summary>
+    Task<int> CountMatchedActiveAsync(CancellationToken ct = default);
+
+    /// <summary>تعداد آگهی‌های فعالِ «سگمنت‌پذیر» (دارای مدل و سال) — ورودیِ واقعیِ اگریگیشن/اسکورینگ.</summary>
+    Task<int> CountSegmentableActiveAsync(CancellationToken ct = default);
 }
 
 public interface IVehicleModelRepository

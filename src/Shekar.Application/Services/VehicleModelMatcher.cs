@@ -6,8 +6,14 @@ namespace Shekar.Application.Services;
 /// <summary>نگاشت متن یک آگهی به یک مدل کاتالوگ (VehicleModel).</summary>
 public interface IVehicleModelMatcher
 {
-    /// <summary>بهترین مدلِ منطبق را برمی‌گرداند یا <c>null</c> اگر تطبیقِ معتبری نبود.</summary>
+    /// <summary>بهترین مدلِ منطبق را برمی‌گرداند یا <c>null</c> اگر تطبیقِ معتبری نبود (راحتی؛ کاتالوگ را هر بار نرمال می‌کند).</summary>
     int? Match(CarListing listing, IReadOnlyList<VehicleModel> catalog);
+
+    /// <summary>تطبیق روی کاتالوگِ <b>از پیش‌نرمال‌شده</b> (مسیرِ داغِ حلقه‌ی نرمال‌سازی).</summary>
+    int? Match(CarListing listing, NormalizedCatalog catalog);
+
+    /// <summary>کاتالوگ را یک‌بار نرمال می‌کند تا در چند تطبیقِ پیاپی دوباره‌کاری نشود.</summary>
+    NormalizedCatalog Prepare(IReadOnlyList<VehicleModel> catalog);
 }
 
 /// <summary>
@@ -20,7 +26,11 @@ public interface IVehicleModelMatcher
 /// </summary>
 public sealed class VehicleModelMatcher : IVehicleModelMatcher
 {
-    public int? Match(CarListing listing, IReadOnlyList<VehicleModel> catalog)
+    public NormalizedCatalog Prepare(IReadOnlyList<VehicleModel> catalog) => new(catalog);
+
+    public int? Match(CarListing listing, IReadOnlyList<VehicleModel> catalog) => Match(listing, Prepare(catalog));
+
+    public int? Match(CarListing listing, NormalizedCatalog catalog)
     {
         string haystack = TextNormalizer.Normalize(
             $"{listing.RawBrand} {listing.RawModel} {listing.RawTrim} {listing.Title}");
@@ -32,16 +42,12 @@ public sealed class VehicleModelMatcher : IVehicleModelMatcher
         int? bestId = null;
         int bestScore = 0;
 
-        foreach (VehicleModel vm in catalog)
+        foreach (NormalizedModel vm in catalog.Entries)
         {
-            string brand = TextNormalizer.Normalize(vm.Brand);
-            string model = TextNormalizer.Normalize(vm.Model);
-            string trim = TextNormalizer.Normalize(vm.Trim);
-
-            bool modelHit = ContainsWord(haystack, model);
-            bool brandHit = brand.Length == 0 || ContainsWord(haystack, brand);
-            bool trimHit = ContainsWord(haystack, trim);
-            bool aliasHit = vm.Aliases.Any(a => ContainsWord(haystack, TextNormalizer.Normalize(a)));
+            bool modelHit = ContainsWord(haystack, vm.Model);
+            bool brandHit = vm.Brand.Length == 0 || ContainsWord(haystack, vm.Brand);
+            bool trimHit = ContainsWord(haystack, vm.Trim);
+            bool aliasHit = AnyAliasHit(haystack, vm.Aliases);
 
             // شرطِ اعتماد: یا مدل مستقیماً هست، یا alias همراهِ تریم (نه alias/برندِ تنها).
             bool qualifies = modelHit || (aliasHit && trimHit);
@@ -51,7 +57,7 @@ public sealed class VehicleModelMatcher : IVehicleModelMatcher
             }
 
             int score = modelHit
-                ? 3 + (brandHit ? 1 : 0) + (trimHit ? 2 : 0) + model.Length
+                ? 3 + (brandHit ? 1 : 0) + (trimHit ? 2 : 0) + vm.Model.Length
                 : 2 + (trimHit ? 1 : 0); // مسیرِ alias+trim
 
             if (score > bestScore)
@@ -62,6 +68,18 @@ public sealed class VehicleModelMatcher : IVehicleModelMatcher
         }
 
         return bestId;
+    }
+
+    private static bool AnyAliasHit(string haystack, string[] aliases)
+    {
+        foreach (string a in aliases)
+        {
+            if (ContainsWord(haystack, a))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>آیا <paramref name="needle"/> به‌صورت یک «کلمه‌ی کامل» در haystack هست (نه داخلِ کلمه/عددِ بزرگ‌تر).</summary>
@@ -88,4 +106,37 @@ public sealed class VehicleModelMatcher : IVehicleModelMatcher
     }
 
     private static bool IsWordChar(char c) => char.IsLetterOrDigit(c);
+}
+
+/// <summary>یک ردیفِ کاتالوگ با فیلدهای از پیش‌نرمال‌شده (برای تطبیقِ ارزان).</summary>
+public readonly record struct NormalizedModel(int Id, string Brand, string Model, string Trim, string[] Aliases);
+
+/// <summary>
+/// کاتالوگِ از پیش‌نرمال‌شده؛ یک‌بار از روی مدل‌ها ساخته می‌شود و با رجیسترِ خودکار قابلِ گسترش است،
+/// تا در حلقه‌ی نرمال‌سازی، متنِ هر مدل برای هر آگهی دوباره نرمال نشود.
+/// </summary>
+public sealed class NormalizedCatalog
+{
+    private readonly List<NormalizedModel> _entries;
+
+    public NormalizedCatalog(IReadOnlyList<VehicleModel> models)
+    {
+        _entries = new List<NormalizedModel>(models.Count);
+        foreach (VehicleModel m in models)
+        {
+            _entries.Add(Create(m));
+        }
+    }
+
+    internal IReadOnlyList<NormalizedModel> Entries => _entries;
+
+    /// <summary>مدلِ تازه (مثلاً رجیسترِ خودکار) را به کاتالوگِ نرمال‌شده می‌افزاید.</summary>
+    public void Add(VehicleModel model) => _entries.Add(Create(model));
+
+    private static NormalizedModel Create(VehicleModel vm) => new(
+        vm.Id,
+        TextNormalizer.Normalize(vm.Brand),
+        TextNormalizer.Normalize(vm.Model),
+        TextNormalizer.Normalize(vm.Trim),
+        vm.Aliases.Select(TextNormalizer.Normalize).Where(a => a.Length > 0).ToArray());
 }

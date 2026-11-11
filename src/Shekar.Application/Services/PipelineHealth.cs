@@ -32,6 +32,12 @@ public sealed record PipelineHealthOptions
     /// <summary>کفِ نرخ تطبیق (٪)؛ پایین‌تر از آن یعنی نرمال‌سازی ضعیف است.</summary>
     public int MinMatchRatePercent { get; init; } = 50;
 
+    /// <summary>
+    /// کفِ نسبتِ «سگمنت‌پذیر به نرمال‌شده» (٪). اگر مدل داریم ولی سالِ کمی داریم، یعنی غنی‌سازیِ
+    /// جزئیات (صفحه‌ی /v) خوب کار نمی‌کند (چلنجِ ضدبات؟) و ورودیِ اسکورینگ تهی می‌ماند.
+    /// </summary>
+    public int MinSegmentableOfMatchedPercent { get; init; } = 60;
+
     /// <summary>حداقل تعداد آگهی فعال برای اینکه نرخ‌ها معنا پیدا کنند (زیر آن سکوت).</summary>
     public int MinListingsForRate { get; init; } = 20;
 
@@ -49,6 +55,8 @@ public sealed record PipelineHealthReport(
     int MatchedListings,
     int UnmatchedListings,
     int MatchRatePercent,
+    int SegmentableListings,
+    int SegmentableRatePercent,
     int Segments,
     int RegisteredModels,
     int ActiveHunts,
@@ -67,8 +75,6 @@ public interface IPipelineHealthService
 
 public sealed class PipelineHealthService : IPipelineHealthService
 {
-    private static readonly ListingSource[] Sources = { ListingSource.Divar, ListingSource.Bama };
-
     private readonly ICrawlRunRepository _runs;
     private readonly ICarListingRepository _listings;
     private readonly IMarketSegmentStatRepository _stats;
@@ -95,21 +101,19 @@ public sealed class PipelineHealthService : IPipelineHealthService
         IReadOnlyList<CrawlRun> recent = await _runs.ListRecentAsync(Math.Max(1, options.RecentRuns), ct);
         CrawlRun? lastCrawl = recent.Count > 0 ? recent[0] : null;
 
-        // شمارشِ آگهی‌های فعال و نرمال‌شده (روی همه‌ی منابع).
-        int active = 0, matched = 0;
-        foreach (ListingSource src in Sources)
-        {
-            IReadOnlyList<CarListing> list = await _listings.ListActiveAsync(src, ct);
-            active += list.Count;
-            matched += list.Count(l => l.VehicleModelId is not null);
-        }
+        // شمارشِ وضعیت با COUNT (بدونِ بارگذاریِ ردیف‌ها).
+        int active = await _listings.CountActiveAsync(ct);
+        int matched = await _listings.CountMatchedActiveAsync(ct);       // دارای مدل
+        int segmentable = await _listings.CountSegmentableActiveAsync(ct); // دارای مدل و سال (ورودیِ واقعی)
         int unmatched = active - matched;
         int matchRate = active > 0 ? (int)Math.Round(matched * 100.0 / active) : 0;
+        int segmentableRate = active > 0 ? (int)Math.Round(segmentable * 100.0 / active) : 0;
 
         int segments = (await _stats.ListAsync(ct)).Count;
         int models = (await _models.ListActiveAsync(ct)).Count;
         int activeHunts = (await _hunts.ListPipelineAsync(ct)).Count(h => h.State == HuntState.Active);
-        int qualifiedRate = matched > 0 ? (int)Math.Round(activeHunts * 100.0 / matched) : 0;
+        // نرخِ واجدشرایط را نسبت به «سگمنت‌پذیر» می‌سنجیم چون ورودیِ واقعیِ اسکورینگ همان است.
+        int qualifiedRate = segmentable > 0 ? (int)Math.Round(activeHunts * 100.0 / segmentable) : 0;
 
         // آخرین کراولِ موفق برای تشخیصِ «متوقف».
         CrawlRun? lastSuccess = recent.FirstOrDefault(r => r.Status == CrawlStatus.Succeeded);
@@ -149,6 +153,16 @@ public sealed class PipelineHealthService : IPipelineHealthService
                 $"نرخ تطبیق پایین است ({matchRate}٪) — نرمال‌سازی ضعیف؛ آگهی‌های بی‌تطبیق را بررسی کنید."));
         }
 
+        // توقفِ غنی‌سازیِ سال: مدل داریم ولی سال نه → ورودیِ اسکورینگ تهی می‌ماند (علامتِ چلنجِ ضدبات).
+        if (matched >= options.MinListingsForRate
+            && segmentable * 100 < matched * options.MinSegmentableOfMatchedPercent)
+        {
+            int segOfMatched = matched > 0 ? (int)Math.Round(segmentable * 100.0 / matched) : 0;
+            alerts.Add(new HealthAlert(HealthLevel.Warning,
+                $"غنی‌سازیِ جزئیات لنگ می‌زند — فقط {segOfMatched}٪ از آگهی‌های نرمال‌شده سال دارند؛ " +
+                "فچِ صفحه‌ی جزئیات (چلنجِ ضدبات؟) را بررسی کنید."));
+        }
+
         if (matched > 0 && segments == 0)
         {
             alerts.Add(new HealthAlert(HealthLevel.Warning,
@@ -169,6 +183,6 @@ public sealed class PipelineHealthService : IPipelineHealthService
 
         return new PipelineHealthReport(
             now, overall, lastCrawl, crawlStale, active, matched, unmatched, matchRate,
-            segments, models, activeHunts, qualifiedRate, recent, alerts);
+            segmentable, segmentableRate, segments, models, activeHunts, qualifiedRate, recent, alerts);
     }
 }

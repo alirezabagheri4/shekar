@@ -52,6 +52,9 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
             .GroupBy(m => m.DivarKey!, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First(), StringComparer.OrdinalIgnoreCase);
 
+        // کاتالوگِ نرمال‌شده را یک‌بار می‌سازیم (نه در هر تطبیق)؛ با رجیسترِ خودکار هم‌گام می‌ماند.
+        NormalizedCatalog normalized = _matcher.Prepare(catalog);
+
         int matched = 0, autoRegistered = 0;
         var unmatchedSamples = new List<string>();
 
@@ -64,7 +67,7 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
             // (۱) مسیر قطعی: شناسه‌ی منبع → یافتن یا رجیستر خودکار.
             if (!string.IsNullOrWhiteSpace(listing.SourceModelKey))
             {
-                (VehicleModel model, bool created) = await ResolveOrCreateAsync(listing, byDivarKey, catalog, ct);
+                (VehicleModel model, bool created) = await ResolveOrCreateAsync(listing, byDivarKey, catalog, normalized, ct);
                 vmId = model.Id;
                 if (created)
                 {
@@ -73,8 +76,8 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
             }
             else if (catalog.Count > 0)
             {
-                // (۲) مسیر هیوریستیک: تطبیق متن با مدل‌های موجود (fallback؛ چیزی نمی‌سازد).
-                vmId = _matcher.Match(listing, catalog);
+                // (۲) مسیر هیوریستیک: تطبیق متن با کاتالوگِ نرمال‌شده (fallback؛ چیزی نمی‌سازد).
+                vmId = _matcher.Match(listing, normalized);
             }
 
             if (vmId is not null)
@@ -94,7 +97,8 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
     }
 
     private async Task<(VehicleModel Model, bool Created)> ResolveOrCreateAsync(
-        CarListing listing, Dictionary<string, VehicleModel> byDivarKey, List<VehicleModel> catalog, CancellationToken ct)
+        CarListing listing, Dictionary<string, VehicleModel> byDivarKey, List<VehicleModel> catalog,
+        NormalizedCatalog normalized, CancellationToken ct)
     {
         string key = listing.SourceModelKey!.Trim();
 
@@ -108,6 +112,7 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
         {
             byDivarKey[key] = existing;
             catalog.Add(existing);
+            normalized.Add(existing);
             return (existing, false);
         }
 
@@ -127,6 +132,7 @@ public sealed class VehicleNormalizationService : IVehicleNormalizationService
         VehicleModel saved = await _models.AddAsync(created, ct);
         byDivarKey[key] = saved;
         catalog.Add(saved);
+        normalized.Add(saved);
         return (saved, true);
     }
 }

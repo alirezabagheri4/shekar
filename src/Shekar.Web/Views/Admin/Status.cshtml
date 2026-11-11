@@ -66,10 +66,11 @@
 <div style="display:flex;flex-wrap:wrap;gap:12px">
 @Html.Raw(StatLabel("آگهی فعال", ViewFormat.Digits(Model.ActiveListings.ToString())))
 @Html.Raw(StatLabel("نرمال‌شده", ViewFormat.Digits(Model.MatchedListings.ToString()), $"نرخ تطبیق {ViewFormat.Digits(Model.MatchRatePercent.ToString())}٪"))
+@Html.Raw(StatLabel("سگمنت‌پذیر", ViewFormat.Digits(Model.SegmentableListings.ToString()), $"دارای سال {ViewFormat.Digits(Model.SegmentableRatePercent.ToString())}٪"))
 @Html.Raw(StatLabel("بی‌تطبیق", ViewFormat.Digits(Model.UnmatchedListings.ToString())))
 @Html.Raw(StatLabel("سگمنت بازار", ViewFormat.Digits(Model.Segments.ToString())))
 @Html.Raw(StatLabel("مدلِ ثبت‌شده", ViewFormat.Digits(Model.RegisteredModels.ToString())))
-@Html.Raw(StatLabel("شکار فعال", ViewFormat.Digits(Model.ActiveHunts.ToString()), $"از نرمال‌شده‌ها {ViewFormat.Digits(Model.QualifiedRatePercent.ToString())}٪"))
+@Html.Raw(StatLabel("شکار فعال", ViewFormat.Digits(Model.ActiveHunts.ToString()), $"از سگمنت‌پذیرها {ViewFormat.Digits(Model.QualifiedRatePercent.ToString())}٪"))
 </div>
 
 <section style="@card">

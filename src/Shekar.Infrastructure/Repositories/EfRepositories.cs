@@ -372,6 +372,16 @@ public sealed class EfCarListingRepository : ICarListingRepository
         _db.CarListings.Update(listing);
         await _db.SaveChangesAsync(ct);
     }
+
+    public Task<int> CountActiveAsync(CancellationToken ct = default) =>
+        _db.CarListings.CountAsync(l => l.State == ListingState.Active, ct);
+
+    public Task<int> CountMatchedActiveAsync(CancellationToken ct = default) =>
+        _db.CarListings.CountAsync(l => l.State == ListingState.Active && l.VehicleModelId != null, ct);
+
+    public Task<int> CountSegmentableActiveAsync(CancellationToken ct = default) =>
+        _db.CarListings.CountAsync(l =>
+            l.State == ListingState.Active && l.VehicleModelId != null && l.ModelYear != null, ct);
 }
 
 public sealed class EfVehicleModelRepository : IVehicleModelRepository

@@ -56,6 +56,20 @@ public sealed class ListingIngestionService : IListingIngestionService
             // آگهی‌های فعالِ این منبع را یک‌بار بارگذاری می‌کنیم: هم برای رد کردنِ فچِ تکراریِ
             // صفحه‌ی جزئیات (کراول دومرحله‌ای)، هم برای تشخیصِ کهنگی در پایان پاس.
             IReadOnlyList<CarListing> active = await _listings.ListActiveAsync(provider.Source, ct);
+
+            // ایندکس‌های درون‌حافظه از همین لیستِ فعال: به‌جای یک کوئری در هر آگهی برای یافتنِ
+            // تکراری دقیق (ExternalId) و تکراری نزدیک (ContentHash)، از حافظه می‌خوانیم.
+            var activeByExternalId = new Dictionary<string, CarListing>(active.Count, StringComparer.Ordinal);
+            var activeContentHashes = new HashSet<string>(active.Count, StringComparer.Ordinal);
+            foreach (CarListing l in active)
+            {
+                activeByExternalId[l.ExternalId] = l;
+                if (!string.IsNullOrEmpty(l.ContentHash))
+                {
+                    activeContentHashes.Add(l.ContentHash);
+                }
+            }
+
             // فقط آگهی‌های «غنی‌شده» (دارای سال) را شناخته‌شده می‌شماریم تا صفحه‌ی جزئیاتشان
             // دوباره فچ نشود. آگهیِ موجودِ بدون‌سال (مثلاً فچِ اول چلنجِ ضدبات خورده) دوباره تلاش می‌شود.
             var enrichedExternalIds = active
@@ -105,7 +119,11 @@ public sealed class ListingIngestionService : IListingIngestionService
                     }
 
                     // تکراری دقیق: همان آگهی از همان منبع → فقط LastSeen به‌روز شود.
-                    CarListing? existing = await _listings.GetByExternalIdAsync(ad.Source, ad.ExternalId, ct);
+                    // ابتدا از ایندکسِ فعال؛ اگر نبود، کوئری (ممکن است آگهیِ حذف‌شده‌ی قابلِ‌بازگشت باشد).
+                    if (!activeByExternalId.TryGetValue(ad.ExternalId, out CarListing? existing))
+                    {
+                        existing = await _listings.GetByExternalIdAsync(ad.Source, ad.ExternalId, ct);
+                    }
                     if (existing is not null)
                     {
                         existing.LastSeenAt = now;
@@ -117,18 +135,29 @@ public sealed class ListingIngestionService : IListingIngestionService
                         }
                         BackfillEnrichment(existing, ad);
                         await _listings.UpdateAsync(existing, ct);
+
+                        // ایندکس‌ها را هم‌گام نگه دار (برای آگهیِ بازگشته از حذف در همین پاس).
+                        activeByExternalId[existing.ExternalId] = existing;
+                        if (!string.IsNullOrEmpty(existing.ContentHash))
+                        {
+                            activeContentHashes.Add(existing.ContentHash);
+                        }
                         continue;
                     }
 
-                    // تکراری نزدیک: شماره+عنوان+قیمت یکسان.
+                    // تکراری نزدیک: شماره+عنوان+قیمت یکسان (از ایندکسِ درون‌حافظه، نه کوئری).
                     string hash = ContentHash.Compute(ad.AdvertiserPhone, ad.Title, ad.PriceToman);
-                    if (await _listings.ExistsActiveByContentHashAsync(hash, ct))
+                    if (activeContentHashes.Contains(hash))
                     {
                         skipped++;
                         continue;
                     }
 
-                    await _listings.AddAsync(Map(ad, hash, cityId, now), ct);
+                    CarListing created = Map(ad, hash, cityId, now);
+                    await _listings.AddAsync(created, ct);
+                    // ایندکس‌ها را به‌روز کن تا تکراری‌های همین پاس هم گرفته شوند.
+                    activeByExternalId[created.ExternalId] = created;
+                    activeContentHashes.Add(hash);
                     saved++;
                 }
                 catch (OperationCanceledException)

@@ -34,4 +34,29 @@ public class StatisticsTests
         var values = new long[] { 100, 110, 120, 130, 10_000 };
         Assert.Equal(120, Statistics.Median(values));
     }
+
+    [Fact]
+    public void Summarize_TrimsOutlier_AndComputesAllStats()
+    {
+        // ۹ قیمتِ نزدیک + یک پرت؛ Summarize باید پرت را حذف و همه‌ی آماره‌ها را بدهد.
+        var values = new long[]
+        {
+            1_000, 1_050, 1_100, 1_020, 1_080, 1_010, 1_060, 1_030, 1_040,
+            10_000 // پرت
+        };
+        PriceStats s = Statistics.Summarize(values);
+
+        Assert.Equal(9, s.SampleCount);                       // پرت حذف شد
+        Assert.Equal(Statistics.Median(new long[] { 1_000, 1_050, 1_100, 1_020, 1_080, 1_010, 1_060, 1_030, 1_040 }), s.Median);
+        Assert.True(s.Average is >= 1_000 and <= 1_100);      // میانگینِ مقاوم (نه کشیده به پرت)
+        Assert.True(s.P25 <= s.Median && s.Median <= s.P75);  // ترتیبِ چارک‌ها
+    }
+
+    [Fact]
+    public void Summarize_Empty_ReturnsZeroes()
+    {
+        PriceStats s = Statistics.Summarize(Array.Empty<long>());
+        Assert.Equal(0, s.SampleCount);
+        Assert.Equal(0, s.Median);
+    }
 }
