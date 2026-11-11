@@ -6,11 +6,27 @@ using Shekar.Domain.Enums;
 
 namespace Shekar.Application.Services;
 
+/// <summary>پارامترهای اعتمادسنجیِ سگمنت (از config قابل‌تنظیم).</summary>
+public sealed record AggregationOptions
+{
+    /// <summary>حداقل نمونه برای «قابل‌اتکا» بودنِ سگمنت.</summary>
+    public int MinReliableSamples { get; init; } = 5;
+
+    /// <summary>بیشینه‌ی پراکندگیِ نسبی (٪) برای «قابل‌اتکا» بودن؛ بالاتر از آن بازار پراکنده و نامطمئن است.</summary>
+    public int MaxReliableSpreadPercent { get; init; } = 60;
+}
+
+/// <summary>نتیجه‌ی یک پاس اگریگیشن (برای پایش).</summary>
+public sealed record AggregationResult(int Segments, int Reliable, int Staled);
+
 /// <summary>ساخت آمار سگمنت‌های بازار (مرحله ۲ پایپ‌لاین، ساعتی).</summary>
 public interface IMarketAggregationService
 {
     /// <summary>سگمنت‌ها را از آگهی‌های نرمال‌شده‌ی پنجره‌ی اخیر می‌سازد؛ تعداد سگمنت را برمی‌گرداند.</summary>
     Task<int> RunAsync(int windowDays, CancellationToken ct = default);
+
+    /// <summary>نسخه‌ی کامل با اعتمادسنجی و کهنه‌کردنِ سگمنت‌های تازه‌نشده.</summary>
+    Task<AggregationResult> RunAsync(int windowDays, AggregationOptions options, CancellationToken ct = default);
 }
 
 /// <summary>
@@ -34,7 +50,10 @@ public sealed class MarketAggregationService : IMarketAggregationService
         _clock = clock;
     }
 
-    public async Task<int> RunAsync(int windowDays, CancellationToken ct = default)
+    public async Task<int> RunAsync(int windowDays, CancellationToken ct = default) =>
+        (await RunAsync(windowDays, new AggregationOptions(), ct)).Segments;
+
+    public async Task<AggregationResult> RunAsync(int windowDays, AggregationOptions options, CancellationToken ct = default)
     {
         DateTimeOffset now = _clock.UtcNow;
         DateTimeOffset since = now.AddDays(-windowDays);
@@ -77,12 +96,19 @@ public sealed class MarketAggregationService : IMarketAggregationService
             acc.Prices.Add(l.PriceToman);
         }
 
+        int reliable = 0;
         foreach (SegmentAccumulator acc in groups.Values)
         {
             ct.ThrowIfCancellationRequested();
             // آمارِ مقاوم: پرت‌ها حذف و همه‌ی آماره‌ها با یک‌بار مرتب‌سازی حساب می‌شوند.
             // SampleCount = تعدادِ نمونه‌ی به‌کاررفته پس از تریم.
             PriceStats s = Statistics.Summarize(acc.Prices);
+            bool isReliable = s.SampleCount >= options.MinReliableSamples
+                && s.SpreadPercent <= options.MaxReliableSpreadPercent;
+            if (isReliable)
+            {
+                reliable++;
+            }
 
             MarketSegmentStat stat = await _stats.GetBySegmentKeyAsync(acc.Key, ct) ?? new MarketSegmentStat();
             stat.SegmentKey = acc.Key;
@@ -92,16 +118,33 @@ public sealed class MarketAggregationService : IMarketAggregationService
             stat.BodyCondition = acc.BodyCondition;
             stat.ColorKey = acc.ColorKey;
             stat.SampleCount = s.SampleCount;
+            stat.RawSampleCount = acc.Prices.Count;
             stat.MedianPriceToman = s.Median;
             stat.AveragePriceToman = s.Average;
+            stat.MinPriceToman = s.Min;
             stat.P25PriceToman = s.P25;
             stat.P75PriceToman = s.P75;
+            stat.SpreadPercent = s.SpreadPercent;
+            stat.IsReliable = isReliable;
             stat.WindowDays = windowDays;
             stat.ComputedAt = now;
             await _stats.UpsertAsync(stat, ct);
         }
 
-        return groups.Count;
+        // کهنه‌کردن: سگمنت‌هایی که این پاس تازه نشدند دیگر مرجعِ قابل‌اتکا نیستند
+        // (مدل/سال از پنجره خارج شده). مدیانِ قدیمی را نگه می‌داریم ولی IsReliable=false.
+        int staled = 0;
+        foreach (MarketSegmentStat old in await _stats.ListAsync(ct))
+        {
+            if (old.IsReliable && !groups.ContainsKey(old.SegmentKey))
+            {
+                old.IsReliable = false;
+                await _stats.UpsertAsync(old, ct);
+                staled++;
+            }
+        }
+
+        return new AggregationResult(groups.Count, reliable, staled);
     }
 
     private sealed record SegmentAccumulator(

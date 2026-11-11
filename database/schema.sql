@@ -431,11 +431,15 @@ CREATE TABLE dbo.MarketSegmentStats (
     MileageBucket     TINYINT        NOT NULL,                    -- باکت کارکرد: 0=صفر..5=+۱۵۰هزار
     BodyCondition     TINYINT        NOT NULL,                    -- وضعیت بدنه
     ColorKey          NVARCHAR(40)   NULL,                        -- رنگ؛ NULL=در این سگمنت دخیل نیست
-    SampleCount       INT            NOT NULL,                    -- تعداد نمونه در پنجره
+    SampleCount       INT            NOT NULL,                    -- تعداد نمونه‌ی به‌کاررفته (پس از تریم)
+    RawSampleCount    INT            NOT NULL,                    -- تعداد نمونه‌ی خام (پیش از تریم)
     MedianPriceToman  BIGINT         NOT NULL,                    -- میانه‌ی قیمت (مرجع اصلی)
     AveragePriceToman BIGINT         NOT NULL,                    -- میانگین قیمت
+    MinPriceToman     BIGINT         NOT NULL,                    -- کمینه‌ی قیمتِ تریم‌شده
     P25PriceToman     BIGINT         NOT NULL,                    -- چارک اول قیمت
     P75PriceToman     BIGINT         NOT NULL,                    -- چارک سوم قیمت
+    SpreadPercent     INT            NOT NULL,                    -- پراکندگیِ نسبی IQR÷میانه (٪)
+    IsReliable        BIT            NOT NULL,                    -- آیا سگمنت قابل‌اتکاست
     WindowDays        INT            NOT NULL,                    -- طول پنجره‌ی نمونه‌گیری (روز)
     ComputedAt        DATETIMEOFFSET NOT NULL,                    -- زمان آخرین محاسبه
     CONSTRAINT PK_MarketSegmentStats PRIMARY KEY (Id),

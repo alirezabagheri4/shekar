@@ -28,15 +28,21 @@ public sealed class AggregateJob : IJob
         int windowDays = _config.GetValue<int?>("Aggregate:WindowDays") ?? 30;
         int normalizeBatch = _config.GetValue<int?>("Aggregate:NormalizeBatch") ?? 5000;
 
+        var aggOptions = new AggregationOptions
+        {
+            MinReliableSamples = _config.GetValue<int?>("Aggregate:MinReliableSamples") ?? 5,
+            MaxReliableSpreadPercent = _config.GetValue<int?>("Aggregate:MaxReliableSpreadPercent") ?? 60
+        };
+
         using IServiceScope scope = _scopeFactory.CreateScope();
         IServiceProvider sp = scope.ServiceProvider;
 
         NormalizationResult norm = await sp.GetRequiredService<IVehicleNormalizationService>().RunAsync(normalizeBatch, ct);
-        int segments = await sp.GetRequiredService<IMarketAggregationService>().RunAsync(windowDays, ct);
+        AggregationResult agg = await sp.GetRequiredService<IMarketAggregationService>().RunAsync(windowDays, aggOptions, ct);
 
         _logger.LogInformation(
-            "اگریگیشن: نرمال‌سازی {Matched} آگهی (رجیستر خودکار {Auto})، بی‌تطبیق {Unmatched}، ساخت {Segments} سگمنت بازار",
-            norm.Matched, norm.AutoRegistered, norm.Unmatched, segments);
+            "اگریگیشن: نرمال‌سازی {Matched} (رجیستر خودکار {Auto})، بی‌تطبیق {Unmatched}، سگمنت {Segments} (قابل‌اتکا {Reliable}، کهنه‌شده {Staled})",
+            norm.Matched, norm.AutoRegistered, norm.Unmatched, agg.Segments, agg.Reliable, agg.Staled);
 
         if (norm.UnmatchedSamples.Count > 0)
         {

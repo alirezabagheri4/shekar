@@ -694,6 +694,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("datetimeoffset")
                         .HasComment("زمان آخرین محاسبه");
 
+                    b.Property<bool>("IsReliable")
+                        .HasColumnType("bit")
+                        .HasComment("آیا سگمنت قابل‌اتکاست (نمونه‌ی کافی + پراکندگیِ محدود + تازه)");
+
                     b.Property<long>("MedianPriceToman")
                         .HasColumnType("bigint")
                         .HasComment("میانه‌ی قیمت (مرجع اصلی)");
@@ -701,6 +705,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.Property<byte>("MileageBucket")
                         .HasColumnType("tinyint")
                         .HasComment("باکت کارکرد: 0=صفر..5=+۱۵۰هزار");
+
+                    b.Property<long>("MinPriceToman")
+                        .HasColumnType("bigint")
+                        .HasComment("کمینه‌ی قیمتِ تریم‌شده");
 
                     b.Property<int>("ModelYear")
                         .HasColumnType("int")
@@ -714,15 +722,23 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasComment("چارک سوم قیمت");
 
+                    b.Property<int>("RawSampleCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد نمونه‌ی خام (پیش از تریم)");
+
                     b.Property<int>("SampleCount")
                         .HasColumnType("int")
-                        .HasComment("تعداد نمونه در پنجره");
+                        .HasComment("تعداد نمونه‌ی به‌کاررفته (پس از تریم)");
 
                     b.Property<string>("SegmentKey")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("nvarchar(120)")
                         .HasComment("کلید یکتای سگمنت (upsert)");
+
+                    b.Property<int>("SpreadPercent")
+                        .HasColumnType("int")
+                        .HasComment("پراکندگیِ نسبی IQR÷میانه (٪)");
 
                     b.Property<int>("VehicleModelId")
                         .HasColumnType("int")

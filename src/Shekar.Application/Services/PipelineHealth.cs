@@ -58,6 +58,7 @@ public sealed record PipelineHealthReport(
     int SegmentableListings,
     int SegmentableRatePercent,
     int Segments,
+    int ReliableSegments,
     int RegisteredModels,
     int ActiveHunts,
     int QualifiedRatePercent,
@@ -109,7 +110,9 @@ public sealed class PipelineHealthService : IPipelineHealthService
         int matchRate = active > 0 ? (int)Math.Round(matched * 100.0 / active) : 0;
         int segmentableRate = active > 0 ? (int)Math.Round(segmentable * 100.0 / active) : 0;
 
-        int segments = (await _stats.ListAsync(ct)).Count;
+        IReadOnlyList<MarketSegmentStat> allStats = await _stats.ListAsync(ct);
+        int segments = allStats.Count;
+        int reliableSegments = allStats.Count(s => s.IsReliable);
         int models = (await _models.ListActiveAsync(ct)).Count;
         int activeHunts = (await _hunts.ListPipelineAsync(ct)).Count(h => h.State == HuntState.Active);
         // نرخِ واجدشرایط را نسبت به «سگمنت‌پذیر» می‌سنجیم چون ورودیِ واقعیِ اسکورینگ همان است.
@@ -169,10 +172,16 @@ public sealed class PipelineHealthService : IPipelineHealthService
                 "آگهیِ نرمال‌شده هست ولی هیچ سگمنتِ بازاری ساخته نشده — اگریگیشن را بررسی کنید."));
         }
 
-        if (segments > 0 && activeHunts == 0)
+        if (segments > 0 && reliableSegments == 0)
+        {
+            alerts.Add(new HealthAlert(HealthLevel.Warning,
+                "هیچ سگمنتِ قابل‌اتکایی نیست — نمونه‌ها کم یا پراکنده‌اند؛ مرجعِ قیمت برای اسکورینگ ضعیف است."));
+        }
+
+        if (reliableSegments > 0 && activeHunts == 0)
         {
             alerts.Add(new HealthAlert(HealthLevel.Info,
-                "سگمنت هست ولی هیچ شکارِ فعالی نیست — یا بازار منصفانه قیمت خورده یا آستانه‌ها سخت‌اند."));
+                "سگمنتِ قابل‌اتکا هست ولی هیچ شکارِ فعالی نیست — یا بازار منصفانه قیمت خورده یا آستانه‌ها سخت‌اند."));
         }
 
         HealthLevel overall = alerts.Count == 0 ? HealthLevel.Ok : alerts.Max(a => a.Level);
@@ -183,6 +192,6 @@ public sealed class PipelineHealthService : IPipelineHealthService
 
         return new PipelineHealthReport(
             now, overall, lastCrawl, crawlStale, active, matched, unmatched, matchRate,
-            segmentable, segmentableRate, segments, models, activeHunts, qualifiedRate, recent, alerts);
+            segmentable, segmentableRate, segments, reliableSegments, models, activeHunts, qualifiedRate, recent, alerts);
     }
 }

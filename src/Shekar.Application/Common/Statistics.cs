@@ -1,7 +1,12 @@
 namespace Shekar.Application.Common;
 
 /// <summary>خلاصه‌ی آماریِ یک سگمنت (پس از حذفِ پرت‌ها).</summary>
-public readonly record struct PriceStats(long Median, long Average, long P25, long P75, int SampleCount);
+public readonly record struct PriceStats(
+    long Min, long P25, long Median, long Average, long P75, long Max, int SampleCount)
+{
+    /// <summary>پراکندگیِ نسبی = IQR÷میانه به درصد؛ معیارِ اعتمادِ سگمنت (تنگ‌تر → مطمئن‌تر).</summary>
+    public int SpreadPercent => Median > 0 ? (int)Math.Round((P75 - P25) * 100.0 / Median) : 0;
+}
 
 /// <summary>محاسبات آماری برای اگریگیشن قیمت (میانه، میانگین، چارک‌ها) با حذفِ مقاومِ پرت.</summary>
 public static class Statistics
@@ -32,15 +37,17 @@ public static class Statistics
     {
         if (rawPrices.Count == 0)
         {
-            return new PriceStats(0, 0, 0, 0, 0);
+            return new PriceStats(0, 0, 0, 0, 0, 0, 0);
         }
 
         long[] kept = TrimSorted(SortedCopy(rawPrices), minCountToTrim);
         return new PriceStats(
+            Min: kept[0],                       // مرتب‌شده
+            P25: PercentileSorted(kept, 25),
             Median: PercentileSorted(kept, 50),
             Average: (long)Math.Round(kept.Average()),
-            P25: PercentileSorted(kept, 25),
             P75: PercentileSorted(kept, 75),
+            Max: kept[^1],
             SampleCount: kept.Length);
     }
 

@@ -76,6 +76,63 @@ public class MarketAggregationTests
     }
 
     [Fact]
+    public async Task Aggregate_MarksReliable_AndFillsQualityFields()
+    {
+        // ۶ آگهیِ هم‌سگمنت با پراکندگیِ کم → سگمنتِ قابل‌اتکا.
+        for (int i = 0; i < 6; i++)
+        {
+            AddListing(1, 1402, 10_000, 1_000_000_000 + i * 10_000_000, BodyCondition.Healthy, "سفید");
+        }
+
+        AggregationResult r = await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        Assert.Equal(1, r.Segments);
+        Assert.Equal(1, r.Reliable);
+        var stat = _store.MarketSegmentStats.Single();
+        Assert.True(stat.IsReliable);
+        Assert.Equal(6, stat.RawSampleCount);
+        Assert.True(stat.MinPriceToman > 0);
+        Assert.True(stat.SpreadPercent is >= 0 and <= 60);
+    }
+
+    [Fact]
+    public async Task Aggregate_MarksLowSample_AsNotReliable()
+    {
+        // فقط ۲ نمونه → زیرِ آستانه‌ی ۵ → غیرقابل‌اتکا (ولی سگمنت ساخته می‌شود).
+        AddListing(1, 1402, 10_000, 1_000_000_000, BodyCondition.Healthy, "سفید");
+        AddListing(1, 1402, 12_000, 1_050_000_000, BodyCondition.Healthy, "سفید");
+
+        AggregationResult r = await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        Assert.Equal(1, r.Segments);
+        Assert.Equal(0, r.Reliable);
+        Assert.False(_store.MarketSegmentStats.Single().IsReliable);
+    }
+
+    [Fact]
+    public async Task Aggregate_StalesSegment_WhenNoLongerSeen()
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            AddListing(1, 1402, 10_000, 1_000_000_000 + i * 10_000_000, BodyCondition.Healthy, "سفید");
+        }
+        await Build().RunAsync(windowDays: 30, new AggregationOptions());
+        Assert.True(_store.MarketSegmentStats.Single().IsReliable);
+
+        // همه‌ی آگهی‌ها از پنجره خارج شوند (دیگر دیده نمی‌شوند).
+        foreach (var l in _store.CarListings)
+        {
+            l.LastSeenAt = _clock.UtcNow.AddDays(-40);
+        }
+
+        AggregationResult r = await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        Assert.Equal(0, r.Segments);  // هیچ سگمنتِ تازه‌ای
+        Assert.Equal(1, r.Staled);    // سگمنتِ قبلی کهنه شد
+        Assert.False(_store.MarketSegmentStats.Single().IsReliable);
+    }
+
+    [Fact]
     public async Task Aggregate_SplitsByColor_WhenAbove4Billion()
     {
         // بالای ۴ میلیارد → رنگ در کلید سگمنت دخیل می‌شود.

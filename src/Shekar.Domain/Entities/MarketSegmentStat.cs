@@ -24,8 +24,11 @@ public class MarketSegmentStat
     /// <summary>کلید رنگ؛ NULL یعنی رنگ در این سگمنت دخیل نیست (خودروی غیرگران).</summary>
     public string? ColorKey { get; set; }
 
-    /// <summary>تعداد نمونه‌ی این سگمنت در پنجره‌ی زمانی.</summary>
+    /// <summary>تعداد نمونه‌ی به‌کاررفته (پس از حذفِ پرت‌ها).</summary>
     public int SampleCount { get; set; }
+
+    /// <summary>تعداد نمونه‌ی خام (پیش از حذفِ پرت)؛ برای شفافیتِ کیفیتِ داده.</summary>
+    public int RawSampleCount { get; set; }
 
     /// <summary>میانه‌ی قیمت (تومان) — مرجع اصلی (مقاوم در برابر آگهی‌های پرت).</summary>
     public long MedianPriceToman { get; set; }
@@ -33,11 +36,23 @@ public class MarketSegmentStat
     /// <summary>میانگین قیمت (تومان).</summary>
     public long AveragePriceToman { get; set; }
 
+    /// <summary>کمینه‌ی قیمتِ نمونه‌ی تریم‌شده (کفِ معقولِ بازار).</summary>
+    public long MinPriceToman { get; set; }
+
     /// <summary>چارک اول (۲۵٪) قیمت.</summary>
     public long P25PriceToman { get; set; }
 
     /// <summary>چارک سوم (۷۵٪) قیمت.</summary>
     public long P75PriceToman { get; set; }
+
+    /// <summary>پراکندگیِ نسبی = IQR÷میانه به درصد؛ هرچه کمتر، مرجعِ قیمت مطمئن‌تر.</summary>
+    public int SpreadPercent { get; set; }
+
+    /// <summary>
+    /// آیا این سگمنت برای تشخیصِ زیرقیمت «قابل‌اتکا» است (نمونه‌ی کافی + پراکندگیِ محدود + تازه).
+    /// سگمنتِ غیرقابل‌اتکا نباید مرجعِ قطعیِ اسکورینگ باشد.
+    /// </summary>
+    public bool IsReliable { get; set; }
 
     /// <summary>طول پنجره‌ی زمانی نمونه‌گیری (روز).</summary>
     public int WindowDays { get; set; }

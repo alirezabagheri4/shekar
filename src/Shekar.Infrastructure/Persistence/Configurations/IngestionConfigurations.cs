@@ -98,11 +98,15 @@ public sealed class MarketSegmentStatConfiguration : IEntityTypeConfiguration<Ma
         b.Property(x => x.MileageBucket).HasConversion<byte>().HasComment("باکت کارکرد: 0=صفر..5=+۱۵۰هزار");
         b.Property(x => x.BodyCondition).HasConversion<byte>().HasComment("وضعیت بدنه");
         b.Property(x => x.ColorKey).HasMaxLength(40).HasComment("رنگ؛ NULL=در این سگمنت دخیل نیست");
-        b.Property(x => x.SampleCount).HasComment("تعداد نمونه در پنجره");
+        b.Property(x => x.SampleCount).HasComment("تعداد نمونه‌ی به‌کاررفته (پس از تریم)");
+        b.Property(x => x.RawSampleCount).HasComment("تعداد نمونه‌ی خام (پیش از تریم)");
         b.Property(x => x.MedianPriceToman).HasComment("میانه‌ی قیمت (مرجع اصلی)");
         b.Property(x => x.AveragePriceToman).HasComment("میانگین قیمت");
+        b.Property(x => x.MinPriceToman).HasComment("کمینه‌ی قیمتِ تریم‌شده");
         b.Property(x => x.P25PriceToman).HasComment("چارک اول قیمت");
         b.Property(x => x.P75PriceToman).HasComment("چارک سوم قیمت");
+        b.Property(x => x.SpreadPercent).HasComment("پراکندگیِ نسبی IQR÷میانه (٪)");
+        b.Property(x => x.IsReliable).HasComment("آیا سگمنت قابل‌اتکاست (نمونه‌ی کافی + پراکندگیِ محدود + تازه)");
         b.Property(x => x.WindowDays).HasComment("طول پنجره‌ی نمونه‌گیری (روز)");
         b.Property(x => x.ComputedAt).HasComment("زمان آخرین محاسبه");
 
