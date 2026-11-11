@@ -16,7 +16,11 @@ public sealed record ScoringOptions
     /// <summary>حداقل تعداد نمونه‌ی سگمنت برای اعتماد به میانه.</summary>
     public int MinSamples { get; init; } = 3;
 
-    /// <summary>درصد زیر بازاری که مؤلفه‌ی قیمت را اشباع می‌کند (۲۰٪ → کامل).</summary>
+    /// <summary>
+    /// درصد زیر بازاری که مؤلفه‌ی قیمت را اشباع می‌کند — فقط زمانی که پراکندگیِ سگمنت نامعلوم است
+    /// (رفتارِ پیشین). وقتی سگمنت پراکندگی دارد، اشباع از روی پراکندگی محاسبه می‌شود (نگاه کنید به
+    /// <see cref="SpreadSaturationMultiple"/>) تا «زیر بازار» از نظر آماری بین سگمنت‌ها قابل‌مقایسه شود.
+    /// </summary>
     public int BelowMarketSaturation { get; init; } = 20;
 
     /// <summary>
@@ -25,7 +29,7 @@ public sealed record ScoringOptions
     /// </summary>
     public int SuspiciousBelowMarketPercent { get; init; } = 40;
 
-    /// <summary>تعداد نمونه‌ای که مؤلفه‌ی اطمینان را کامل می‌کند (۵ نمونه → ۱۰۰).</summary>
+    /// <summary>تعداد نمونه‌ای که «کفایتِ نمونه»ی مؤلفه‌ی اطمینان را کامل می‌کند (۵ نمونه → کامل).</summary>
     public int ConfidenceFullAtSamples { get; init; } = 5;
 
     /// <summary>روندِ صعودیِ قابل‌توجه (٪)؛ بالاتر از آن، بازار رو به رشد است و احتیاطِ بیشتری لازم است.</summary>
@@ -36,6 +40,46 @@ public sealed record ScoringOptions
     /// فقط یک آگهیِ عقب‌مانده باشد؛ پس برای واجد شرایط شدن، زیربازاریِ بیشتری می‌طلبیم.
     /// </summary>
     public int RisingMarketExtraMarginPercent { get; init; } = 3;
+
+    // ── سیگنالِ قیمتِ نسبت‌به‌پراکندگی (G1) ───────────────────────────────────────────
+    // «زیر بازار»ِ خام از نظر آماری صادق نیست: ۸٪ زیرِ یک بازارِ پراکنده عادی است، ولی همان ۸٪ زیرِ
+    // یک بازارِ فشرده سیگنالِ قوی است. پس اشباعِ مؤلفه‌ی قیمت را با پراکندگیِ خودِ سگمنت مقیاس می‌کنیم.
+
+    /// <summary>
+    /// ضریبِ تبدیلِ پراکندگی به اشباع: تخفیفی برابرِ (این ضریب × پراکندگیِ نسبیِ سگمنت) مؤلفه‌ی قیمت را
+    /// کامل می‌کند. ۱٫۰ یعنی تخفیفی به اندازه‌ی کلِ گستره‌ی میان‌چارکیِ بازار، امتیازِ قیمتِ کامل می‌دهد.
+    /// </summary>
+    public double SpreadSaturationMultiple { get; init; } = 1.0;
+
+    /// <summary>کفِ اشباعِ قیمت (٪)؛ در بازارِ خیلی فشرده نگذاریم تخفیفِ ناچیز بیش‌ازحد امتیاز بگیرد.</summary>
+    public int MinPriceSaturationPercent { get; init; } = 8;
+
+    /// <summary>سقفِ اشباعِ قیمت (٪)؛ در بازارِ خیلی پراکنده اشباع را محدود نگه می‌داریم.</summary>
+    public int MaxPriceSaturationPercent { get; init; } = 35;
+
+    // ── اطمینانِ مبتنی‌بر‌اعتبار (G2) ─────────────────────────────────────────────────
+    // اطمینان دیگر فقط «تعدادِ نمونه» نیست: فشردگیِ پراکندگی و سطحِ backoff (دقیق در برابر درشت) هم
+    // در آن دخیل‌اند؛ شکارِ روی مرجعِ نازک/پراکنده/درشت خودبه‌خود اطمینانِ کمتری می‌گیرد.
+
+    /// <summary>پراکندگیِ نسبی (٪) که در آن یا پایین‌تر، عاملِ پراکندگیِ اطمینان کامل است.</summary>
+    public int IdealSpreadPercent { get; init; } = 15;
+
+    /// <summary>بازه‌ی پراکندگی (٪) بالاتر از حدِ ایده‌آل که در طولِ آن عاملِ پراکندگی تا کفِ خود افت می‌کند.</summary>
+    public int DispersionSpanPercent { get; init; } = 45;
+
+    /// <summary>کفِ عاملِ پراکندگیِ اطمینان (حتی بازارِ خیلی پراکنده کمی اطمینان دارد).</summary>
+    public double DispersionFloor { get; init; } = 0.30;
+
+    /// <summary>
+    /// جریمه‌ی اطمینان به‌ازای هر سطحِ درشت‌ترِ backoff: اطمینان × (این عدد)^Level.
+    /// L0 (دقیق) جریمه ندارد؛ هر سطحِ درشت‌تر اطمینان را کم می‌کند.
+    /// </summary>
+    public double LevelPenaltyFactor { get; init; } = 0.85;
+
+    // ── گیتِ اعتبار روی طلایی (G4) ────────────────────────────────────────────────────
+
+    /// <summary>طلایی‌شدن علاوه بر امتیاز، نیازمندِ مرجعِ «قابل‌اتکا» باشد (مرجعِ لرزان طلایی نشود).</summary>
+    public bool RequireReliableForGolden { get; init; } = true;
 
     public double PriceWeight { get; init; } = 0.55;
     public double LiquidityWeight { get; init; } = 0.35;
@@ -64,9 +108,13 @@ public sealed class HuntScorer : IHuntScorer
         long profit = HuntCalculations.EstimatedNetProfit(expected, listing.PriceToman);
 
         // مؤلفه‌ها (۰..۱۰۰):
-        double priceComp = Math.Clamp(belowPct * 100.0 / Math.Max(1, o.BelowMarketSaturation), 0, 100);
+        // قیمت (G1): تخفیف نسبت به پراکندگیِ خودِ سگمنت سنجیده می‌شود؛ بازارِ فشرده‌تر → امتیازِ بیشتر.
+        double saturation = PriceSaturation(segment, o);
+        double priceComp = Math.Clamp(belowPct * 100.0 / saturation, 0, 100);
+        // نقدشوندگی: فعلاً از کاتالوگ (نقدشوندگیِ داده‌محور، فازِ بعدی).
         double liqComp = Math.Clamp(model.LiquidityScore, 0, 100);
-        double confComp = Math.Clamp(segment.SampleCount * 100.0 / Math.Max(1, o.ConfidenceFullAtSamples), 0, 100);
+        // اطمینان (G2): کفایتِ نمونه × فشردگیِ پراکندگی × سطحِ backoff.
+        double confComp = Confidence(segment, o) * 100.0;
 
         int score = (int)Math.Round(o.PriceWeight * priceComp + o.LiquidityWeight * liqComp + o.ConfidenceWeight * confComp);
         score = Math.Clamp(score, 0, 100);
@@ -76,7 +124,11 @@ public sealed class HuntScorer : IHuntScorer
         // محافظِ کلاه‌برداری/پرت: زیربازارِ بیش از سقفِ منطقی، آگهیِ «مشکوک» است؛ طلایی نمی‌شود
         // و به‌عنوان فرصت واجد شرایط نیست (کاربر را به سمت کلاه‌برداری نمی‌بریم).
         bool suspicious = belowPct >= o.SuspiciousBelowMarketPercent;
-        bool golden = score >= DomainConstants.GoldenScoreThreshold && !suspicious;
+
+        // طلایی (G4): علاوه بر امتیاز و نبودِ شک، مرجع باید قابل‌اتکا باشد تا فرصتِ برتر روی مرجعِ لرزان ننشیند.
+        bool golden = score >= DomainConstants.GoldenScoreThreshold
+            && !suspicious
+            && (!o.RequireReliableForGolden || segment.IsReliable);
 
         // در بازارِ صعودی، حاشیه‌ی زیربازاریِ بیشتری می‌طلبیم (احتیاط در برابر آگهیِ عقب‌مانده).
         int extraMargin = segment.TrendPercent >= o.RisingMarketTrendPercent ? o.RisingMarketExtraMarginPercent : 0;
@@ -87,6 +139,43 @@ public sealed class HuntScorer : IHuntScorer
             && score >= o.MinScore;
 
         return new ScoreResult(qualifies, score, belowPct, profit, liquidity, golden, suspicious, expected);
+    }
+
+    /// <summary>
+    /// اشباعِ مؤلفه‌ی قیمت (٪): از روی پراکندگیِ نسبیِ سگمنت. بازارِ فشرده‌تر با همان تخفیف امتیازِ بیشتری
+    /// می‌گیرد. اگر پراکندگی نامعلوم باشد (سگمنتِ قدیمی یا تک‌قیمتی)، به اشباعِ ثابتِ پیشین برمی‌گردیم.
+    /// </summary>
+    private static double PriceSaturation(MarketSegmentStat segment, ScoringOptions o)
+    {
+        if (segment.SpreadPercent <= 0)
+        {
+            return Math.Max(1, o.BelowMarketSaturation);
+        }
+
+        double sat = segment.SpreadPercent * o.SpreadSaturationMultiple;
+        return Math.Clamp(sat, Math.Max(1, o.MinPriceSaturationPercent), o.MaxPriceSaturationPercent);
+    }
+
+    /// <summary>
+    /// عاملِ اطمینان در بازه‌ی [۰..۱]: کفایتِ نمونه × عاملِ پراکندگی × عاملِ سطحِ backoff.
+    /// هر سه در نبودِ داده به رفتارِ خنثیِ پیشین (فقط تعدادِ نمونه) برمی‌گردند.
+    /// </summary>
+    private static double Confidence(MarketSegmentStat segment, ScoringOptions o)
+    {
+        double sampleAdequacy = Math.Clamp(segment.SampleCount / (double)Math.Max(1, o.ConfidenceFullAtSamples), 0, 1);
+
+        // عاملِ پراکندگی: فشرده (≤ ایده‌آل) → ۱؛ هرچه پراکنده‌تر، تا کفِ تعیین‌شده افت می‌کند. ناملعوم → خنثی.
+        double dispersion = 1.0;
+        if (segment.SpreadPercent > o.IdealSpreadPercent && o.DispersionSpanPercent > 0)
+        {
+            double over = segment.SpreadPercent - o.IdealSpreadPercent;
+            dispersion = Math.Clamp(1.0 - over / o.DispersionSpanPercent, o.DispersionFloor, 1.0);
+        }
+
+        // عاملِ سطح: L0 دقیق → ۱؛ هر سطحِ درشت‌تر ضرب در LevelPenaltyFactor.
+        double level = Math.Pow(Math.Clamp(o.LevelPenaltyFactor, 0, 1), segment.Level);
+
+        return Math.Clamp(sampleAdequacy * dispersion * level, 0, 1);
     }
 
     /// <summary>

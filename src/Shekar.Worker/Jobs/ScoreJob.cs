@@ -35,7 +35,15 @@ public sealed class ScoreJob : IJob
             SuspiciousBelowMarketPercent = _config.GetValue<int?>("Score:SuspiciousBelowMarketPercent") ?? 40,
             ConfidenceFullAtSamples = _config.GetValue<int?>("Score:ConfidenceFullAtSamples") ?? 5,
             RisingMarketTrendPercent = _config.GetValue<int?>("Score:RisingMarketTrendPercent") ?? 5,
-            RisingMarketExtraMarginPercent = _config.GetValue<int?>("Score:RisingMarketExtraMarginPercent") ?? 3
+            RisingMarketExtraMarginPercent = _config.GetValue<int?>("Score:RisingMarketExtraMarginPercent") ?? 3,
+            SpreadSaturationMultiple = _config.GetValue<double?>("Score:SpreadSaturationMultiple") ?? 1.0,
+            MinPriceSaturationPercent = _config.GetValue<int?>("Score:MinPriceSaturationPercent") ?? 8,
+            MaxPriceSaturationPercent = _config.GetValue<int?>("Score:MaxPriceSaturationPercent") ?? 35,
+            IdealSpreadPercent = _config.GetValue<int?>("Score:IdealSpreadPercent") ?? 15,
+            DispersionSpanPercent = _config.GetValue<int?>("Score:DispersionSpanPercent") ?? 45,
+            DispersionFloor = _config.GetValue<double?>("Score:DispersionFloor") ?? 0.30,
+            LevelPenaltyFactor = _config.GetValue<double?>("Score:LevelPenaltyFactor") ?? 0.85,
+            RequireReliableForGolden = _config.GetValue<bool?>("Score:RequireReliableForGolden") ?? true
         };
 
         using IServiceScope scope = _scopeFactory.CreateScope();
