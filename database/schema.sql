@@ -426,6 +426,7 @@ GO
 CREATE TABLE dbo.MarketSegmentStats (
     Id                INT            NOT NULL IDENTITY(1,1),       -- شناسه
     SegmentKey        NVARCHAR(120)  NOT NULL,                    -- کلید یکتای سگمنت (upsert)
+    Level             TINYINT        NOT NULL,                    -- سطحِ سلسله‌مراتب: 0=دقیق،1=بدونِ‌رنگ،2=بدونِ‌بدنه
     VehicleModelId    INT            NOT NULL,                    -- مدل خودرو
     ModelYear         INT            NOT NULL,                    -- سال مدل
     MileageBucket     TINYINT        NOT NULL,                    -- باکت کارکرد: 0=صفر..5=+۱۵۰هزار

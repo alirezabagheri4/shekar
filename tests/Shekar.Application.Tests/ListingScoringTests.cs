@@ -1,6 +1,7 @@
 using Shekar.Application.Abstractions;
 using Shekar.Application.Common;
 using Shekar.Application.Services;
+using Shekar.Domain;
 using Shekar.Domain.Entities;
 using Shekar.Domain.Enums;
 using Shekar.Mock;
@@ -50,6 +51,34 @@ public class ListingScoringTests
             MileageBucket = MileageBucket.To20k, BodyCondition = BodyCondition.Healthy,
             SampleCount = samples, MedianPriceToman = median, ComputedAt = _clock.UtcNow
         });
+    }
+
+    private void AddReliableL2Segment(CarListing listing, long median, int samples)
+    {
+        var bucket = DomainConstants.ResolveMileageBucket(listing.MileageKm);
+        _store.MarketSegmentStats.Add(new MarketSegmentStat
+        {
+            Id = _store.MarketSegmentStats.Select(s => s.Id).DefaultIfEmpty(0).Max() + 1,
+            SegmentKey = SegmentKey.BuildL2(1, listing.ModelYear!.Value, bucket), Level = 2,
+            VehicleModelId = 1, ModelYear = listing.ModelYear.Value, MileageBucket = bucket,
+            BodyCondition = BodyCondition.Unknown, SampleCount = samples, MedianPriceToman = median,
+            IsReliable = true, ComputedAt = _clock.UtcNow
+        });
+    }
+
+    [Fact]
+    public async Task Backoff_UsesCoarserReliableSegment_WhenExactMissing()
+    {
+        // هیچ سگمنتِ دقیقی (L0) نیست؛ فقط یک سطحِ درشتِ قابل‌اتکا (L2) → باید از آن استفاده شود.
+        var listing = AddListing(1_340_000_000);
+        AddReliableL2Segment(listing, median: 1_560_000_000, samples: 8);
+
+        ScoringRunResult r = await Build().RunAsync(new ScoringOptions(), windowHours: 48);
+
+        Assert.Equal(1, r.Qualified);
+        Assert.Equal(1, r.Created);
+        Hunt created = _store.Hunts.Single(h => h.SourceListingId == listing.Id);
+        Assert.Equal(1_560_000_000, created.MarketMedianToman);
     }
 
     [Fact]

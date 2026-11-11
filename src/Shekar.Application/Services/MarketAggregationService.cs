@@ -64,8 +64,11 @@ public sealed class MarketAggregationService : IMarketAggregationService
         IReadOnlyList<VehicleModel> models = await _models.ListActiveAsync(ct);
         Dictionary<int, VehicleModel> modelById = models.ToDictionary(m => m.Id);
 
-        // گروه‌بندی بر اساس کلید سگمنت.
-        var groups = new Dictionary<string, SegmentAccumulator>();
+        // سلسله‌مراتبِ سگمنت: L0 دقیق (مدل+سال+کارکرد+بدنه+رنگ)، L1 بدونِ رنگ، L2 بدونِ بدنه.
+        // سطوحِ درشت‌تر فقط وقتی ذخیره می‌شوند که «بیش از یک» سطحِ ریز را ادغام کنند (بدونِ افزونگی).
+        var l0 = new Dictionary<string, LevelAccumulator>(StringComparer.Ordinal);
+        var l1 = new Dictionary<string, LevelAccumulator>(StringComparer.Ordinal);
+        var l2 = new Dictionary<string, LevelAccumulator>(StringComparer.Ordinal);
 
         foreach (CarListing l in listings)
         {
@@ -75,8 +78,8 @@ public sealed class MarketAggregationService : IMarketAggregationService
             }
 
             modelById.TryGetValue(vmId, out VehicleModel? vm);
-            string? key = SegmentKey.ForListing(l, vm);
-            if (key is null)
+            string? l0Key = SegmentKey.ForListing(l, vm);
+            if (l0Key is null)
             {
                 continue;
             }
@@ -88,55 +91,51 @@ public sealed class MarketAggregationService : IMarketAggregationService
                 colorKey = null;
             }
 
-            if (!groups.TryGetValue(key, out SegmentAccumulator? acc))
-            {
-                acc = new SegmentAccumulator(key, vmId, year, bucket, l.BodyCondition, colorKey);
-                groups[key] = acc;
-            }
-            acc.Prices.Add(l.PriceToman);
+            long price = l.PriceToman;
+            string k1 = SegmentKey.BuildL1(vmId, year, bucket, l.BodyCondition);
+            string k2 = SegmentKey.BuildL2(vmId, year, bucket);
+
+            Accumulate(l0, l0Key, 0, vmId, year, bucket, l.BodyCondition, colorKey, price, source: l0Key);
+            // L1 رنگ‌ها را در یک بدنه ادغام می‌کند (منبعِ تمایز = کلیدِ دقیق/رنگ).
+            Accumulate(l1, k1, 1, vmId, year, bucket, l.BodyCondition, null, price, source: l0Key);
+            // L2 بدنه‌ها را ادغام می‌کند (منبعِ تمایز = کلیدِ L1/بدنه).
+            Accumulate(l2, k2, 2, vmId, year, bucket, BodyCondition.Unknown, null, price, source: k1);
         }
 
+        var currentKeys = new HashSet<string>(StringComparer.Ordinal);
         int reliable = 0;
-        foreach (SegmentAccumulator acc in groups.Values)
+
+        // L0 همیشه ذخیره می‌شود.
+        foreach (LevelAccumulator acc in l0.Values)
         {
             ct.ThrowIfCancellationRequested();
-            // آمارِ مقاوم: پرت‌ها حذف و همه‌ی آماره‌ها با یک‌بار مرتب‌سازی حساب می‌شوند.
-            // SampleCount = تعدادِ نمونه‌ی به‌کاررفته پس از تریم.
-            PriceStats s = Statistics.Summarize(acc.Prices);
-            bool isReliable = s.SampleCount >= options.MinReliableSamples
-                && s.SpreadPercent <= options.MaxReliableSpreadPercent;
-            if (isReliable)
+            if (await PersistAsync(acc, options, now, windowDays, ct))
             {
                 reliable++;
             }
-
-            MarketSegmentStat stat = await _stats.GetBySegmentKeyAsync(acc.Key, ct) ?? new MarketSegmentStat();
-            stat.SegmentKey = acc.Key;
-            stat.VehicleModelId = acc.VehicleModelId;
-            stat.ModelYear = acc.Year;
-            stat.MileageBucket = acc.Bucket;
-            stat.BodyCondition = acc.BodyCondition;
-            stat.ColorKey = acc.ColorKey;
-            stat.SampleCount = s.SampleCount;
-            stat.RawSampleCount = acc.Prices.Count;
-            stat.MedianPriceToman = s.Median;
-            stat.AveragePriceToman = s.Average;
-            stat.MinPriceToman = s.Min;
-            stat.P25PriceToman = s.P25;
-            stat.P75PriceToman = s.P75;
-            stat.SpreadPercent = s.SpreadPercent;
-            stat.IsReliable = isReliable;
-            stat.WindowDays = windowDays;
-            stat.ComputedAt = now;
-            await _stats.UpsertAsync(stat, ct);
+            currentKeys.Add(acc.Key);
         }
 
-        // کهنه‌کردن: سگمنت‌هایی که این پاس تازه نشدند دیگر مرجعِ قابل‌اتکا نیستند
-        // (مدل/سال از پنجره خارج شده). مدیانِ قدیمی را نگه می‌داریم ولی IsReliable=false.
+        // سطوحِ درشت فقط اگر واقعاً ادغام کنند (Sources > 1).
+        foreach (LevelAccumulator acc in l1.Values.Concat(l2.Values))
+        {
+            ct.ThrowIfCancellationRequested();
+            if (acc.Sources.Count <= 1)
+            {
+                continue; // ادغامِ بی‌اثر؛ همتای ریزش کافی است
+            }
+            if (await PersistAsync(acc, options, now, windowDays, ct))
+            {
+                reliable++;
+            }
+            currentKeys.Add(acc.Key);
+        }
+
+        // کهنه‌کردن: هر سگمنتِ قابل‌اتکایی که این پاس تازه نشد دیگر مرجعِ معتبر نیست.
         int staled = 0;
         foreach (MarketSegmentStat old in await _stats.ListAsync(ct))
         {
-            if (old.IsReliable && !groups.ContainsKey(old.SegmentKey))
+            if (old.IsReliable && !currentKeys.Contains(old.SegmentKey))
             {
                 old.IsReliable = false;
                 await _stats.UpsertAsync(old, ct);
@@ -144,12 +143,58 @@ public sealed class MarketAggregationService : IMarketAggregationService
             }
         }
 
-        return new AggregationResult(groups.Count, reliable, staled);
+        return new AggregationResult(currentKeys.Count, reliable, staled);
     }
 
-    private sealed record SegmentAccumulator(
-        string Key, int VehicleModelId, int Year, MileageBucket Bucket, BodyCondition BodyCondition, string? ColorKey)
+    private static void Accumulate(
+        Dictionary<string, LevelAccumulator> map, string key, byte level, int vmId, int year,
+        MileageBucket bucket, BodyCondition body, string? colorKey, long price, string source)
+    {
+        if (!map.TryGetValue(key, out LevelAccumulator? acc))
+        {
+            acc = new LevelAccumulator(key, level, vmId, year, bucket, body, colorKey);
+            map[key] = acc;
+        }
+        acc.Prices.Add(price);
+        acc.Sources.Add(source);
+    }
+
+    /// <summary>آمارِ مقاومِ یک سگمنت را حساب و upsert می‌کند؛ <c>true</c> اگر قابل‌اتکا شد.</summary>
+    private async Task<bool> PersistAsync(
+        LevelAccumulator acc, AggregationOptions options, DateTimeOffset now, int windowDays, CancellationToken ct)
+    {
+        // پرت‌ها حذف و همه‌ی آماره‌ها با یک‌بار مرتب‌سازی حساب می‌شوند.
+        PriceStats s = Statistics.Summarize(acc.Prices);
+        bool isReliable = s.SampleCount >= options.MinReliableSamples
+            && s.SpreadPercent <= options.MaxReliableSpreadPercent;
+
+        MarketSegmentStat stat = await _stats.GetBySegmentKeyAsync(acc.Key, ct) ?? new MarketSegmentStat();
+        stat.SegmentKey = acc.Key;
+        stat.Level = acc.Level;
+        stat.VehicleModelId = acc.VehicleModelId;
+        stat.ModelYear = acc.Year;
+        stat.MileageBucket = acc.Bucket;
+        stat.BodyCondition = acc.BodyCondition;
+        stat.ColorKey = acc.ColorKey;
+        stat.SampleCount = s.SampleCount;
+        stat.RawSampleCount = acc.Prices.Count;
+        stat.MedianPriceToman = s.Median;
+        stat.AveragePriceToman = s.Average;
+        stat.MinPriceToman = s.Min;
+        stat.P25PriceToman = s.P25;
+        stat.P75PriceToman = s.P75;
+        stat.SpreadPercent = s.SpreadPercent;
+        stat.IsReliable = isReliable;
+        stat.WindowDays = windowDays;
+        stat.ComputedAt = now;
+        await _stats.UpsertAsync(stat, ct);
+        return isReliable;
+    }
+
+    private sealed record LevelAccumulator(
+        string Key, byte Level, int VehicleModelId, int Year, MileageBucket Bucket, BodyCondition BodyCondition, string? ColorKey)
     {
         public List<long> Prices { get; } = new();
+        public HashSet<string> Sources { get; } = new(StringComparer.Ordinal);
     }
 }

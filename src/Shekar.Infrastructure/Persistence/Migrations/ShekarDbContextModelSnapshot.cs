@@ -698,6 +698,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("bit")
                         .HasComment("آیا سگمنت قابل‌اتکاست (نمونه‌ی کافی + پراکندگیِ محدود + تازه)");
 
+                    b.Property<byte>("Level")
+                        .HasColumnType("tinyint")
+                        .HasComment("سطحِ سلسله‌مراتب: 0=دقیق،1=بدونِ‌رنگ،2=بدونِ‌بدنه");
+
                     b.Property<long>("MedianPriceToman")
                         .HasColumnType("bigint")
                         .HasComment("میانه‌ی قیمت (مرجع اصلی)");

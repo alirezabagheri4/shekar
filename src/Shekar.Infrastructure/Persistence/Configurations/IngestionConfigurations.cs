@@ -93,6 +93,7 @@ public sealed class MarketSegmentStatConfiguration : IEntityTypeConfiguration<Ma
         b.ToTable("MarketSegmentStats").HasComment("آمار ساعتیِ هر سگمنت بازار؛ مرجع تشخیص زیرقیمت‌بودن");
         b.HasKey(x => x.Id);
         b.Property(x => x.SegmentKey).HasMaxLength(120).IsRequired().HasComment("کلید یکتای سگمنت (upsert)");
+        b.Property(x => x.Level).HasComment("سطحِ سلسله‌مراتب: 0=دقیق،1=بدونِ‌رنگ،2=بدونِ‌بدنه");
         b.Property(x => x.VehicleModelId).HasComment("مدل خودرو");
         b.Property(x => x.ModelYear).HasComment("سال مدل");
         b.Property(x => x.MileageBucket).HasConversion<byte>().HasComment("باکت کارکرد: 0=صفر..5=+۱۵۰هزار");

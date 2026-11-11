@@ -67,16 +67,11 @@ public sealed class ListingScoringService : IListingScoringService
                 continue;
             }
 
-            string? key = SegmentKey.ForListing(listing, model);
-            if (key is null)
-            {
-                continue;
-            }
-
-            MarketSegmentStat? segment = await _stats.GetBySegmentKeyAsync(key, ct);
+            // backoff: دقیق‌ترین سطحِ قابل‌اتکا را می‌گیریم؛ اگر هیچ سطحی قابل‌اتکا نبود، دقیق‌ترینِ موجود.
+            MarketSegmentStat? segment = await ResolveSegmentAsync(listing, model, ct);
             if (segment is null)
             {
-                continue; // هنوز آمار سگمنت ساخته نشده
+                continue; // هنوز هیچ آمارِ سگمنتی (حتی درشت) برای این آگهی نیست
             }
 
             evaluated++;
@@ -137,6 +132,36 @@ public sealed class ListingScoringService : IListingScoringService
         }
 
         return new ScoringRunResult(evaluated, qualified, created, updated, removed, suspicious, duplicates);
+    }
+
+    /// <summary>
+    /// سگمنتِ مرجعِ یک آگهی را با backoffِ سلسله‌مراتبی برمی‌گرداند: از دقیق (مدل+سال+کارکرد+بدنه+رنگ)
+    /// به درشت (بدونِ رنگ، سپس بدونِ بدنه). دقیق‌ترین سطحِ «قابل‌اتکا» ترجیح دارد؛ اگر هیچ‌کدام
+    /// قابل‌اتکا نبود، دقیق‌ترینِ موجود (تا پوشش از دست نرود؛ اعتمادِ کم با SampleCount در امتیاز لحاظ می‌شود).
+    /// </summary>
+    private async Task<MarketSegmentStat?> ResolveSegmentAsync(CarListing listing, VehicleModel model, CancellationToken ct)
+    {
+        IReadOnlyList<string>? keys = SegmentKey.HierarchyKeys(listing, model);
+        if (keys is null)
+        {
+            return null;
+        }
+
+        MarketSegmentStat? mostSpecificExisting = null;
+        foreach (string key in keys) // دقیق → درشت
+        {
+            MarketSegmentStat? s = await _stats.GetBySegmentKeyAsync(key, ct);
+            if (s is null)
+            {
+                continue;
+            }
+            mostSpecificExisting ??= s;
+            if (s.IsReliable)
+            {
+                return s; // دقیق‌ترین سطحِ قابل‌اتکا
+            }
+        }
+        return mostSpecificExisting;
     }
 
     private static void Apply(Hunt hunt, CarListing l, MarketSegmentStat segment, ScoreResult r, DateTimeOffset now)

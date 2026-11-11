@@ -76,6 +76,41 @@ public class MarketAggregationTests
     }
 
     [Fact]
+    public async Task Aggregate_BuildsCoarseLevel_WhenMergingBodies()
+    {
+        // دو بدنه‌ی متفاوت در یک (مدل+سال+کارکرد) → سطحِ L2 (بدونِ بدنه) باید ساخته شود و بدنه‌ها را ادغام کند.
+        for (int i = 0; i < 3; i++)
+        {
+            AddListing(1, 1402, 10_000, 1_000_000_000 + i * 10_000_000, BodyCondition.Healthy, null);
+            AddListing(1, 1402, 12_000, 1_020_000_000 + i * 10_000_000, BodyCondition.Painted, null);
+        }
+
+        await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        // دو سگمنتِ L0 (هر بدنه) + یک سگمنتِ L2 (ادغامِ بدنه‌ها).
+        Assert.Equal(2, _store.MarketSegmentStats.Count(s => s.Level == 0));
+        Assert.Equal(0, _store.MarketSegmentStats.Count(s => s.Level == 1)); // رنگ دخیل نیست → L1 افزونه نیست
+        var l2 = _store.MarketSegmentStats.Single(s => s.Level == 2);
+        Assert.StartsWith("L2|", l2.SegmentKey);
+        Assert.Equal(6, l2.RawSampleCount); // هر دو بدنه
+    }
+
+    [Fact]
+    public async Task Aggregate_SkipsRedundantCoarse_WhenSingleChild()
+    {
+        // همه هم‌بدنه/هم‌رنگ → هیچ ادغامی لازم نیست؛ فقط L0.
+        for (int i = 0; i < 4; i++)
+        {
+            AddListing(1, 1402, 10_000, 1_000_000_000 + i * 10_000_000, BodyCondition.Healthy, null);
+        }
+
+        await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        Assert.Single(_store.MarketSegmentStats);
+        Assert.Equal(0, _store.MarketSegmentStats.Single().Level);
+    }
+
+    [Fact]
     public async Task Aggregate_MarksReliable_AndFillsQualityFields()
     {
         // ۶ آگهیِ هم‌سگمنت با پراکندگیِ کم → سگمنتِ قابل‌اتکا.
@@ -135,13 +170,19 @@ public class MarketAggregationTests
     [Fact]
     public async Task Aggregate_SplitsByColor_WhenAbove4Billion()
     {
-        // بالای ۴ میلیارد → رنگ در کلید سگمنت دخیل می‌شود.
+        // بالای ۴ میلیارد → رنگ در کلید سگمنتِ دقیق دخیل می‌شود.
         AddListing(1, 1403, 5_000, 5_000_000_000, BodyCondition.Healthy, "سفید");
         AddListing(1, 1403, 6_000, 5_200_000_000, BodyCondition.Healthy, "مشکی");
 
-        int segments = await Build().RunAsync(windowDays: 30);
+        await Build().RunAsync(windowDays: 30, new AggregationOptions());
 
-        Assert.Equal(2, segments); // دو رنگ → دو سگمنت
-        Assert.All(_store.MarketSegmentStats, s => Assert.NotNull(s.ColorKey));
+        // دو رنگ → دو سگمنتِ دقیق (L0)، هرکدام با رنگِ خودش.
+        var level0 = _store.MarketSegmentStats.Where(s => s.Level == 0).ToList();
+        Assert.Equal(2, level0.Count);
+        Assert.All(level0, s => Assert.NotNull(s.ColorKey));
+        // و یک سطحِ L1 که دو رنگ را ادغام می‌کند (بدونِ رنگ).
+        var l1 = _store.MarketSegmentStats.Single(s => s.Level == 1);
+        Assert.Null(l1.ColorKey);
+        Assert.Equal(2, l1.RawSampleCount);
     }
 }

@@ -13,6 +13,12 @@ public class MarketSegmentStat
     /// <summary>کلید متنیِ یکتای سگمنت (برای upsert سریع).</summary>
     public string SegmentKey { get; set; } = string.Empty;
 
+    /// <summary>
+    /// سطحِ ویژگیِ سگمنت در سلسله‌مراتب: ۰=دقیق (مدل+سال+کارکرد+بدنه+رنگ)،
+    /// ۱=بدونِ رنگ، ۲=بدونِ بدنه (مدل+سال+کارکرد). اسکورینگ دقیق‌ترین سطحِ قابل‌اتکا را می‌گیرد.
+    /// </summary>
+    public byte Level { get; set; }
+
     public int VehicleModelId { get; set; }
 
     public int ModelYear { get; set; }
