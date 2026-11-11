@@ -26,13 +26,13 @@ public class ListingScoringTests
         new MockMarketSegmentStatRepository(_store), new MockHuntRepository(_store, _clock),
         new HuntScorer(), _clock);
 
-    private CarListing AddListing(long price)
+    private CarListing AddListing(long price, int mileageKm = 10_000)
     {
         var l = new CarListing
         {
             Id = _store.CarListings.Select(x => x.Id).DefaultIfEmpty(0).Max() + 1,
             Source = ListingSource.Divar, ExternalId = Guid.NewGuid().ToString(), Title = "پژو ۲۰۷ دستی ۱۴۰۲",
-            VehicleModelId = 1, ModelYear = 1402, MileageKm = 10_000, BodyCondition = BodyCondition.Healthy,
+            VehicleModelId = 1, ModelYear = 1402, MileageKm = mileageKm, BodyCondition = BodyCondition.Healthy,
             PriceToman = price, CityId = 1, State = ListingState.Active,
             PublishedAt = _clock.UtcNow.AddMinutes(-30), FetchedAt = _clock.UtcNow, LastSeenAt = _clock.UtcNow
         };
@@ -79,6 +79,35 @@ public class ListingScoringTests
         Assert.Equal(1, r.Created);
         Hunt created = _store.Hunts.Single(h => h.SourceListingId == listing.Id);
         Assert.Equal(1_560_000_000, created.MarketMedianToman);
+    }
+
+    private void AddSegmentWithSlope(CarListing listing, long median, int samples, int refMileageKm, long slopePerK)
+    {
+        var model = _store.VehicleModels.First(m => m.Id == 1);
+        string key = SegmentKey.ForListing(listing, model)!;
+        _store.MarketSegmentStats.Add(new MarketSegmentStat
+        {
+            Id = _store.MarketSegmentStats.Select(s => s.Id).DefaultIfEmpty(0).Max() + 1,
+            SegmentKey = key, Level = 0, VehicleModelId = 1, ModelYear = 1402,
+            MileageBucket = DomainConstants.ResolveMileageBucket(listing.MileageKm),
+            BodyCondition = BodyCondition.Healthy, SampleCount = samples, MedianPriceToman = median,
+            RefMileageKm = refMileageKm, MileageSlopeTomanPerK = slopePerK, ComputedAt = _clock.UtcNow
+        });
+    }
+
+    [Fact]
+    public async Task HighMileageCar_BelowRawMedian_DoesNotQualify_AfterMileageAdjustment()
+    {
+        // کارکردِ بالا (۱۵۰هزار) در برابر کارکردِ مرجع ۵۰هزار؛ شیبِ -۵م/هزارکیلومتر.
+        // قیمتِ موردانتظار = ۱.۵B - ۵م×۱۰۰ = ۱.۰B؛ پس قیمتِ ۱.۳B «زیر بازار» نیست (برعکسِ مقایسه با میانه‌ی خام).
+        var listing = AddListing(1_300_000_000, mileageKm: 150_000);
+        AddSegmentWithSlope(listing, median: 1_500_000_000, samples: 8, refMileageKm: 50_000, slopePerK: -5_000_000);
+
+        ScoringRunResult r = await Build().RunAsync(new ScoringOptions(), windowHours: 48);
+
+        Assert.Equal(1, r.Evaluated);
+        Assert.Equal(0, r.Qualified); // تعدیلِ کارکرد از فرصتِ کاذب جلوگیری کرد
+        Assert.DoesNotContain(_store.Hunts, h => h.SourceListingId == listing.Id);
     }
 
     [Fact]

@@ -22,6 +22,29 @@ public static class Statistics
         values.Count == 0 ? 0 : (long)Math.Round(values.Average());
 
     /// <summary>
+    /// شیبِ رگرسیونِ خطی (کمترین‌مربعات) y بر حسب x؛ <c>0</c> اگر کمتر از ۲ نقطه یا x بدونِ پراکندگی.
+    /// برای برآوردِ «افتِ قیمت به‌ازای هر واحدِ کارکرد».
+    /// </summary>
+    public static double Slope(IReadOnlyList<(double X, double Y)> points)
+    {
+        if (points.Count < 2)
+        {
+            return 0;
+        }
+
+        double meanX = points.Average(p => p.X);
+        double meanY = points.Average(p => p.Y);
+        double sxx = 0, sxy = 0;
+        foreach ((double x, double y) in points)
+        {
+            double dx = x - meanX;
+            sxx += dx * dx;
+            sxy += dx * (y - meanY);
+        }
+        return sxx <= 0 ? 0 : sxy / sxx;
+    }
+
+    /// <summary>
     /// پرت‌های قیمت را با حصارِ IQR (۱.۵×) حذف می‌کند تا میانگین/چارک در برابر آگهی‌های
     /// غلط (قیمتِ تایپی، اقساطی، اسپم) مقاوم شوند. برای نمونه‌های کوچک (کمتر از
     /// <paramref name="minCountToTrim"/>) و زمانی که تریم بیش از نیمی را حذف کند، داده‌ی خام برمی‌گردد.

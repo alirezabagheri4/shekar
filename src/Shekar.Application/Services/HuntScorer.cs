@@ -36,7 +36,7 @@ public sealed record ScoringOptions
 /// <summary>نتیجه‌ی اسکورِ یک آگهی نسبت به سگمنتش.</summary>
 public sealed record ScoreResult(
     bool Qualifies, int Score, int BelowMarketPercent, long EstimatedProfitToman, Liquidity Liquidity,
-    bool IsGolden, bool IsSuspicious);
+    bool IsGolden, bool IsSuspicious, long ExpectedPriceToman);
 
 /// <summary>اسکورر شکار (آماری/هیوریستیک)؛ پشت interface تا بعداً با مدل ML جایگزین شود.</summary>
 public interface IHuntScorer
@@ -48,10 +48,11 @@ public sealed class HuntScorer : IHuntScorer
 {
     public ScoreResult Score(CarListing listing, MarketSegmentStat segment, VehicleModel model, ScoringOptions o)
     {
-        long median = segment.MedianPriceToman;
-        int belowPct = median > 0 ? (int)Math.Round((median - listing.PriceToman) * 100.0 / median) : 0;
+        // قیمتِ موردانتظار برای همین کارکرد (میانه + شیب × اختلافِ کارکرد)؛ مرجعِ دقیق‌ترِ «زیر بازار».
+        long expected = ExpectedPrice(listing, segment);
+        int belowPct = expected > 0 ? (int)Math.Round((expected - listing.PriceToman) * 100.0 / expected) : 0;
 
-        long profit = HuntCalculations.EstimatedNetProfit(median, listing.PriceToman);
+        long profit = HuntCalculations.EstimatedNetProfit(expected, listing.PriceToman);
 
         // مؤلفه‌ها (۰..۱۰۰):
         double priceComp = Math.Clamp(belowPct * 100.0 / Math.Max(1, o.BelowMarketSaturation), 0, 100);
@@ -73,6 +74,23 @@ public sealed class HuntScorer : IHuntScorer
             && segment.SampleCount >= o.MinSamples
             && score >= o.MinScore;
 
-        return new ScoreResult(qualifies, score, belowPct, profit, liquidity, golden, suspicious);
+        return new ScoreResult(qualifies, score, belowPct, profit, liquidity, golden, suspicious, expected);
+    }
+
+    /// <summary>
+    /// قیمتِ موردانتظارِ خودرو با کارکردِ مشخصش: میانه‌ی سگمنت + شیبِ کارکرد × اختلافِ کارکرد (هزارکیلومتر).
+    /// اگر شیب/کارکردِ مرجع نبود یا آگهی کارکرد نداشت، همان میانه (رفتارِ پیشین).
+    /// </summary>
+    private static long ExpectedPrice(CarListing listing, MarketSegmentStat segment)
+    {
+        long median = segment.MedianPriceToman;
+        if (segment.MileageSlopeTomanPerK == 0 || segment.RefMileageKm <= 0 || listing.MileageKm is not { } km)
+        {
+            return median;
+        }
+
+        long deltaK = (km - segment.RefMileageKm) / 1000; // اختلافِ کارکرد به هزارکیلومتر
+        long expected = median + segment.MileageSlopeTomanPerK * deltaK;
+        return expected > 0 ? expected : median; // ایمنی در برابر مقدارِ نامعقول
     }
 }

@@ -59,4 +59,24 @@ public class StatisticsTests
         Assert.Equal(0, s.SampleCount);
         Assert.Equal(0, s.Median);
     }
+
+    [Fact]
+    public void Slope_IsNegative_WhenPriceFallsWithMileage()
+    {
+        // قیمت با افزایشِ کارکرد پایین می‌آید → شیبِ منفی.
+        var points = new (double X, double Y)[]
+        {
+            (10_000, 1_500_000_000), (30_000, 1_450_000_000), (60_000, 1_350_000_000),
+            (90_000, 1_250_000_000), (120_000, 1_150_000_000)
+        };
+        double slope = Statistics.Slope(points);
+        Assert.True(slope < 0);
+    }
+
+    [Fact]
+    public void Slope_IsZero_WhenNoVariationInX()
+    {
+        var points = new (double X, double Y)[] { (50_000, 1_000), (50_000, 2_000) };
+        Assert.Equal(0, Statistics.Slope(points));
+    }
 }

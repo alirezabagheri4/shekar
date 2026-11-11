@@ -172,7 +172,8 @@ public sealed class ListingScoringService : IListingScoringService
         hunt.Location = l.RawLocation ?? string.Empty;
         hunt.CityId = l.CityId ?? hunt.CityId;
         hunt.PriceToman = l.PriceToman;
-        hunt.MarketMedianToman = segment.MedianPriceToman;
+        // «قیمتِ بازار»ِ نمایشی = قیمتِ موردانتظار برای همین کارکرد (مرجعِ منصفانه برای این خودرو).
+        hunt.MarketMedianToman = r.ExpectedPriceToman;
         hunt.BelowMarketPercent = r.BelowMarketPercent;
         hunt.Score = r.Score;
         hunt.Liquidity = r.Liquidity;

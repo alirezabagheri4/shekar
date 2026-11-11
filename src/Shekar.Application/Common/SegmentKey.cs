@@ -24,6 +24,13 @@ public static class SegmentKey
         $"L2|VM{vehicleModelId}|Y{year}|M{(byte)bucket}";
 
     /// <summary>
+    /// کلید سطح ۳ (مدل+سال؛ بدونِ کارکرد/بدنه/رنگ). پیشوندِ «L3|». این سطح همه‌ی کارکردها را گرد می‌آورد
+    /// و شیبِ کارکرد روی آن برآورد می‌شود؛ مرجعِ پرنمونه برای مدل‌های کم‌آگهی (با تعدیلِ کارکرد).
+    /// </summary>
+    public static string BuildL3(int vehicleModelId, int year) =>
+        $"L3|VM{vehicleModelId}|Y{year}";
+
+    /// <summary>
     /// کلیدهای سلسله‌مراتبِ یک آگهی، از دقیق به درشت (L0, L1, L2)؛ <c>null</c> اگر مدل/سال نداشته باشد.
     /// اسکورینگ به‌ترتیب امتحان می‌کند و دقیق‌ترین سطحِ قابل‌اتکا را برمی‌دارد.
     /// </summary>
@@ -36,7 +43,13 @@ public static class SegmentKey
 
         MileageBucket bucket = DomainConstants.ResolveMileageBucket(listing.MileageKm);
         string l0 = ForListing(listing, model)!;
-        return new[] { l0, BuildL1(vmId, year, bucket, listing.BodyCondition), BuildL2(vmId, year, bucket) };
+        return new[]
+        {
+            l0,
+            BuildL1(vmId, year, bucket, listing.BodyCondition),
+            BuildL2(vmId, year, bucket),
+            BuildL3(vmId, year)
+        };
     }
 
     /// <summary>کلید سگمنت یک آگهی را می‌سازد؛ <c>null</c> اگر مدل یا سال نداشته باشد.</summary>

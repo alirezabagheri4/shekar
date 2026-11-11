@@ -76,6 +76,25 @@ public class MarketAggregationTests
     }
 
     [Fact]
+    public async Task Aggregate_ComputesNegativeMileageSlope_AtModelYearLevel()
+    {
+        // قیمت با کارکرد پایین می‌آید؛ چند باکتِ کارکرد → سطحِ L3 با شیبِ منفی و کارکردِ مرجع.
+        AddListing(1, 1402, 10_000, 1_500_000_000, BodyCondition.Healthy, null);
+        AddListing(1, 1402, 30_000, 1_450_000_000, BodyCondition.Healthy, null);
+        AddListing(1, 1402, 60_000, 1_350_000_000, BodyCondition.Healthy, null);
+        AddListing(1, 1402, 90_000, 1_250_000_000, BodyCondition.Healthy, null);
+        AddListing(1, 1402, 120_000, 1_150_000_000, BodyCondition.Healthy, null);
+        AddListing(1, 1402, 150_000, 1_050_000_000, BodyCondition.Healthy, null);
+
+        await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        var l3 = _store.MarketSegmentStats.Single(s => s.Level == 3);
+        Assert.StartsWith("L3|", l3.SegmentKey);
+        Assert.True(l3.MileageSlopeTomanPerK < 0);  // قیمت با کارکرد نزول می‌کند
+        Assert.True(l3.RefMileageKm > 0);           // کارکردِ مرجع (میانه) تنظیم شد
+    }
+
+    [Fact]
     public async Task Aggregate_BuildsCoarseLevel_WhenMergingBodies()
     {
         // دو بدنه‌ی متفاوت در یک (مدل+سال+کارکرد) → سطحِ L2 (بدونِ بدنه) باید ساخته شود و بدنه‌ها را ادغام کند.

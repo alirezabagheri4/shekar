@@ -440,6 +440,8 @@ CREATE TABLE dbo.MarketSegmentStats (
     P25PriceToman     BIGINT         NOT NULL,                    -- چارک اول قیمت
     P75PriceToman     BIGINT         NOT NULL,                    -- چارک سوم قیمت
     SpreadPercent     INT            NOT NULL,                    -- پراکندگیِ نسبی IQR÷میانه (٪)
+    RefMileageKm      INT            NOT NULL,                    -- کارکردِ مرجع (میانه)؛ مبنای تعدیلِ کارکرد
+    MileageSlopeTomanPerK BIGINT     NOT NULL,                    -- شیبِ قیمت به‌ازای هر ۱۰۰۰ کیلومتر (معمولاً منفی)
     IsReliable        BIT            NOT NULL,                    -- آیا سگمنت قابل‌اتکاست
     WindowDays        INT            NOT NULL,                    -- طول پنجره‌ی نمونه‌گیری (روز)
     ComputedAt        DATETIMEOFFSET NOT NULL,                    -- زمان آخرین محاسبه

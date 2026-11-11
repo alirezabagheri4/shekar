@@ -710,6 +710,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                         .HasColumnType("tinyint")
                         .HasComment("باکت کارکرد: 0=صفر..5=+۱۵۰هزار");
 
+                    b.Property<long>("MileageSlopeTomanPerK")
+                        .HasColumnType("bigint")
+                        .HasComment("شیبِ قیمت به‌ازای هر ۱۰۰۰ کیلومتر (تومان، معمولاً منفی)");
+
                     b.Property<long>("MinPriceToman")
                         .HasColumnType("bigint")
                         .HasComment("کمینه‌ی قیمتِ تریم‌شده");
@@ -729,6 +733,10 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.Property<int>("RawSampleCount")
                         .HasColumnType("int")
                         .HasComment("تعداد نمونه‌ی خام (پیش از تریم)");
+
+                    b.Property<int>("RefMileageKm")
+                        .HasColumnType("int")
+                        .HasComment("کارکردِ مرجع (میانه‌ی نمونه)؛ مبنای تعدیلِ کارکرد");
 
                     b.Property<int>("SampleCount")
                         .HasColumnType("int")
