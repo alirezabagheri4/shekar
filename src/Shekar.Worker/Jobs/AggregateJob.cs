@@ -1,6 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Quartz;
+using Shekar.Application.Abstractions;
 using Shekar.Application.Services;
+using Shekar.Domain.Entities;
+using Shekar.Domain.Enums;
 
 namespace Shekar.Worker.Jobs;
 
@@ -37,19 +40,47 @@ public sealed class AggregateJob : IJob
 
         using IServiceScope scope = _scopeFactory.CreateScope();
         IServiceProvider sp = scope.ServiceProvider;
+        var runs = sp.GetRequiredService<IAggregateRunRepository>();
 
-        NormalizationResult norm = await sp.GetRequiredService<IVehicleNormalizationService>().RunAsync(normalizeBatch, ct);
-        AggregationResult agg = await sp.GetRequiredService<IMarketAggregationService>().RunAsync(windowDays, aggOptions, ct);
-
-        _logger.LogInformation(
-            "اگریگیشن: نرمال‌سازی {Matched} (رجیستر خودکار {Auto})، بی‌تطبیق {Unmatched}، سگمنت {Segments} (قابل‌اتکا {Reliable}، کهنه‌شده {Staled})",
-            norm.Matched, norm.AutoRegistered, norm.Unmatched, agg.Segments, agg.Reliable, agg.Staled);
-
-        if (norm.UnmatchedSamples.Count > 0)
+        AggregateRun run = await runs.AddAsync(new AggregateRun { StartedAt = DateTimeOffset.UtcNow }, ct);
+        try
         {
-            _logger.LogWarning(
-                "پوشش: {Count} آگهی بی‌تطبیق ماند (نمونه): {Samples}",
-                norm.Unmatched, string.Join(" | ", norm.UnmatchedSamples));
+            NormalizationResult norm = await sp.GetRequiredService<IVehicleNormalizationService>().RunAsync(normalizeBatch, ct);
+            AggregationResult agg = await sp.GetRequiredService<IMarketAggregationService>().RunAsync(windowDays, aggOptions, ct);
+
+            run.NormalizedCount = norm.Matched;
+            run.AutoRegistered = norm.AutoRegistered;
+            run.UnmatchedCount = norm.Unmatched;
+            run.SegmentCount = agg.Segments;
+            run.ReliableSegmentCount = agg.Reliable;
+            run.StaledCount = agg.Staled;
+            run.Status = CrawlStatus.Succeeded;
+
+            _logger.LogInformation(
+                "اگریگیشن: نرمال‌سازی {Matched} (رجیستر خودکار {Auto})، بی‌تطبیق {Unmatched}، سگمنت {Segments} (قابل‌اتکا {Reliable}، کهنه‌شده {Staled})",
+                norm.Matched, norm.AutoRegistered, norm.Unmatched, agg.Segments, agg.Reliable, agg.Staled);
+
+            if (norm.UnmatchedSamples.Count > 0)
+            {
+                _logger.LogWarning(
+                    "پوشش: {Count} آگهی بی‌تطبیق ماند (نمونه): {Samples}",
+                    norm.Unmatched, string.Join(" | ", norm.UnmatchedSamples));
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            run.Status = CrawlStatus.Failed;
+            run.Error = ex.Message;
+            _logger.LogError(ex, "خطای اگریگیشن");
+        }
+        finally
+        {
+            run.FinishedAt = DateTimeOffset.UtcNow;
+            await runs.UpdateAsync(run, ct);
         }
     }
 }

@@ -457,6 +457,32 @@ public sealed class EfCrawlRunRepository : ICrawlRunRepository
             .ToListAsync(ct);
 }
 
+public sealed class EfAggregateRunRepository : IAggregateRunRepository
+{
+    private readonly ShekarDbContext _db;
+    public EfAggregateRunRepository(ShekarDbContext db) => _db = db;
+
+    public async Task<AggregateRun> AddAsync(AggregateRun run, CancellationToken ct = default)
+    {
+        _db.AggregateRuns.Add(run);
+        await _db.SaveChangesAsync(ct);
+        return run;
+    }
+
+    public async Task UpdateAsync(AggregateRun run, CancellationToken ct = default)
+    {
+        _db.AggregateRuns.Update(run);
+        await _db.SaveChangesAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<AggregateRun>> ListRecentAsync(int take, CancellationToken ct = default) =>
+        await _db.AggregateRuns
+            .AsNoTracking()
+            .OrderByDescending(r => r.StartedAt)
+            .Take(Math.Max(0, take))
+            .ToListAsync(ct);
+}
+
 public sealed class EfPaymentRepository : IPaymentRepository
 {
     private readonly ShekarDbContext _db;

@@ -71,6 +71,63 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.HasComment("آگهی‌دهنده‌ها و حجم آگهی‌گذاری‌شان؛ مبنای تشخیص دلال/اسپمر");
                 });
 
+            modelBuilder.Entity("Shekar.Domain.Entities.AggregateRun", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"), 1L, 1);
+
+                    b.Property<int>("AutoRegistered")
+                        .HasColumnType("int")
+                        .HasComment("تعداد مدلِ رجیسترِ خودکار");
+
+                    b.Property<string>("Error")
+                        .HasColumnType("nvarchar(max)")
+                        .HasComment("پیام خطا");
+
+                    b.Property<DateTimeOffset?>("FinishedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("زمان پایان");
+
+                    b.Property<int>("NormalizedCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد آگهیِ نرمال‌شده");
+
+                    b.Property<int>("ReliableSegmentCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد سگمنتِ قابل‌اتکا");
+
+                    b.Property<int>("SegmentCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد کلِ سگمنت");
+
+                    b.Property<int>("StaledCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد سگمنتِ کهنه‌شده");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("زمان شروع");
+
+                    b.Property<byte>("Status")
+                        .HasColumnType("tinyint")
+                        .HasComment("وضعیت: 1=درحال‌اجرا،2=موفق،3=خطا");
+
+                    b.Property<int>("UnmatchedCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد بی‌تطبیق");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StartedAt");
+
+                    b.ToTable("AggregateRuns", (string)null);
+
+                    b.HasComment("لاگ هر پاس اگریگیشن (نرمال‌سازی + ساخت سگمنت) برای پایش");
+                });
+
             modelBuilder.Entity("Shekar.Domain.Entities.Appraisal", b =>
                 {
                     b.Property<int>("Id")

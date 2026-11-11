@@ -31,6 +31,7 @@ public class ShekarDbContext : DbContext
     public DbSet<CarListing> CarListings => Set<CarListing>();
     public DbSet<MarketSegmentStat> MarketSegmentStats => Set<MarketSegmentStat>();
     public DbSet<CrawlRun> CrawlRuns => Set<CrawlRun>();
+    public DbSet<AggregateRun> AggregateRuns => Set<AggregateRun>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

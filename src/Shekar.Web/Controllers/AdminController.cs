@@ -53,6 +53,7 @@ public class AdminController : Controller
         var options = new PipelineHealthOptions
         {
             StaleCrawlHours = _config.GetValue<int?>("Health:StaleCrawlHours") ?? 6,
+            StaleAggregateHours = _config.GetValue<int?>("Health:StaleAggregateHours") ?? 3,
             MinMatchRatePercent = _config.GetValue<int?>("Health:MinMatchRatePercent") ?? 50,
             MinSegmentableOfMatchedPercent = _config.GetValue<int?>("Health:MinSegmentableOfMatchedPercent") ?? 60,
             MinListingsForRate = _config.GetValue<int?>("Health:MinListingsForRate") ?? 20,

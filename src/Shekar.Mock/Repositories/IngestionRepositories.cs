@@ -136,3 +136,33 @@ public sealed class MockCrawlRunRepository : ICrawlRunRepository
         }
     }
 }
+
+public sealed class MockAggregateRunRepository : IAggregateRunRepository
+{
+    private readonly MockDataStore _store;
+    public MockAggregateRunRepository(MockDataStore store) => _store = store;
+
+    public Task<AggregateRun> AddAsync(AggregateRun run, CancellationToken ct = default)
+    {
+        lock (_store.Gate)
+        {
+            run.Id = _store.AggregateRuns.Select(r => r.Id).DefaultIfEmpty(0).Max() + 1;
+            _store.AggregateRuns.Add(run);
+        }
+        return Task.FromResult(run);
+    }
+
+    public Task UpdateAsync(AggregateRun run, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task<IReadOnlyList<AggregateRun>> ListRecentAsync(int take, CancellationToken ct = default)
+    {
+        lock (_store.Gate)
+        {
+            IReadOnlyList<AggregateRun> recent = _store.AggregateRuns
+                .OrderByDescending(r => r.StartedAt)
+                .Take(Math.Max(0, take))
+                .ToList();
+            return Task.FromResult(recent);
+        }
+    }
+}

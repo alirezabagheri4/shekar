@@ -74,6 +74,25 @@
 </div>
 
 <section style="@card">
+<b style="font-size: 17px; display: block; margin-bottom: 12px">آخرین اگریگیشن (داده‌سازی)</b>
+@if (Model.LastAggregate is null)
+{
+<p style="color: #6B7280; font-size: 14px; margin: 8px 0">هنوز هیچ پاسِ اگریگیشنی ثبت نشده است.</p>
+}
+else
+{
+<div style="display:flex;flex-wrap:wrap;gap:18px;font-size:14px;color:#374151">
+<span>وضعیت: <b>@CrawlStatusLabel(Model.LastAggregate.Status)</b></span>
+<span>زمان: @ViewFormat.RelativeTime(Model.LastAggregate.StartedAt, Model.GeneratedAt)</span>
+<span>نرمال‌شده: @ViewFormat.Digits(Model.LastAggregate.NormalizedCount.ToString())</span>
+<span>رجیستر خودکار: @ViewFormat.Digits(Model.LastAggregate.AutoRegistered.ToString())</span>
+<span>سگمنت: @ViewFormat.Digits(Model.LastAggregate.SegmentCount.ToString()) (قابل‌اتکا @ViewFormat.Digits(Model.LastAggregate.ReliableSegmentCount.ToString()))</span>
+<span>کهنه‌شده: @ViewFormat.Digits(Model.LastAggregate.StaledCount.ToString())</span>
+</div>
+}
+</section>
+
+<section style="@card">
 <b style="font-size: 17px; display: block; margin-bottom: 12px">پاس‌های اخیر کراول</b>
 @if (Model.RecentCrawls.Count == 0)
 {

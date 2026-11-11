@@ -28,6 +28,7 @@ public sealed class MockDataStore
     public List<BlockedAdvertiser> BlockedAdvertisers { get; } = new();
     public List<CarListing> CarListings { get; } = new();
     public List<CrawlRun> CrawlRuns { get; } = new();
+    public List<AggregateRun> AggregateRuns { get; } = new();
     public List<VehicleModel> VehicleModels { get; } = new();
     public List<MarketSegmentStat> MarketSegmentStats { get; } = new();
     public List<Payment> Payments { get; } = new();

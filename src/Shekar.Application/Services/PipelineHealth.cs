@@ -29,6 +29,9 @@ public sealed record PipelineHealthOptions
     /// <summary>اگر از آخرین کراولِ موفق بیش از این ساعت گذشته باشد، «کراول متوقف» است.</summary>
     public int StaleCrawlHours { get; init; } = 6;
 
+    /// <summary>اگر از آخرین اگریگیشنِ موفق بیش از این ساعت گذشته باشد، «اگریگیشن متوقف» است.</summary>
+    public int StaleAggregateHours { get; init; } = 3;
+
     /// <summary>کفِ نرخ تطبیق (٪)؛ پایین‌تر از آن یعنی نرمال‌سازی ضعیف است.</summary>
     public int MinMatchRatePercent { get; init; } = 50;
 
@@ -51,6 +54,8 @@ public sealed record PipelineHealthReport(
     HealthLevel Overall,
     CrawlRun? LastCrawl,
     bool CrawlStale,
+    AggregateRun? LastAggregate,
+    bool AggregateStale,
     int ActiveListings,
     int MatchedListings,
     int UnmatchedListings,
@@ -77,6 +82,7 @@ public interface IPipelineHealthService
 public sealed class PipelineHealthService : IPipelineHealthService
 {
     private readonly ICrawlRunRepository _runs;
+    private readonly IAggregateRunRepository _aggRuns;
     private readonly ICarListingRepository _listings;
     private readonly IMarketSegmentStatRepository _stats;
     private readonly IVehicleModelRepository _models;
@@ -84,10 +90,11 @@ public sealed class PipelineHealthService : IPipelineHealthService
     private readonly IClock _clock;
 
     public PipelineHealthService(
-        ICrawlRunRepository runs, ICarListingRepository listings, IMarketSegmentStatRepository stats,
-        IVehicleModelRepository models, IHuntRepository hunts, IClock clock)
+        ICrawlRunRepository runs, IAggregateRunRepository aggRuns, ICarListingRepository listings,
+        IMarketSegmentStatRepository stats, IVehicleModelRepository models, IHuntRepository hunts, IClock clock)
     {
         _runs = runs;
+        _aggRuns = aggRuns;
         _listings = listings;
         _stats = stats;
         _models = models;
@@ -101,6 +108,9 @@ public sealed class PipelineHealthService : IPipelineHealthService
 
         IReadOnlyList<CrawlRun> recent = await _runs.ListRecentAsync(Math.Max(1, options.RecentRuns), ct);
         CrawlRun? lastCrawl = recent.Count > 0 ? recent[0] : null;
+
+        IReadOnlyList<AggregateRun> recentAgg = await _aggRuns.ListRecentAsync(Math.Max(1, options.RecentRuns), ct);
+        AggregateRun? lastAggregate = recentAgg.Count > 0 ? recentAgg[0] : null;
 
         // شمارشِ وضعیت با COUNT (بدونِ بارگذاریِ ردیف‌ها).
         int active = await _listings.CountActiveAsync(ct);
@@ -122,6 +132,11 @@ public sealed class PipelineHealthService : IPipelineHealthService
         CrawlRun? lastSuccess = recent.FirstOrDefault(r => r.Status == CrawlStatus.Succeeded);
         DateTimeOffset? lastSuccessAt = lastSuccess?.FinishedAt ?? lastSuccess?.StartedAt;
         bool crawlStale = lastSuccessAt is null || (now - lastSuccessAt.Value).TotalHours > options.StaleCrawlHours;
+
+        // آخرین اگریگیشنِ موفق برای تشخیصِ توقفِ داده‌سازی.
+        AggregateRun? lastAggSuccess = recentAgg.FirstOrDefault(r => r.Status == CrawlStatus.Succeeded);
+        DateTimeOffset? lastAggAt = lastAggSuccess?.FinishedAt ?? lastAggSuccess?.StartedAt;
+        bool aggregateStale = lastAggAt is null || (now - lastAggAt.Value).TotalHours > options.StaleAggregateHours;
 
         var alerts = new List<HealthAlert>();
 
@@ -148,6 +163,17 @@ public sealed class PipelineHealthService : IPipelineHealthService
                 alerts.Add(new HealthAlert(HealthLevel.Alarm,
                     "آخرین کراول صفر آگهی گرفت — احتمالِ تغییرِ ساختارِ سایت یا بلاک‌شدن."));
             }
+        }
+
+        if (lastAggregate?.Status == CrawlStatus.Failed)
+        {
+            alerts.Add(new HealthAlert(HealthLevel.Alarm,
+                $"آخرین پاسِ اگریگیشن با خطا تمام شد: {lastAggregate.Error ?? "نامشخص"}"));
+        }
+        else if (matched >= options.MinListingsForRate && aggregateStale)
+        {
+            alerts.Add(new HealthAlert(HealthLevel.Warning,
+                $"اگریگیشن متوقف است — آخرین پاسِ موفق بیش از {options.StaleAggregateHours} ساعت پیش بوده."));
         }
 
         if (active >= options.MinListingsForRate && matchRate < options.MinMatchRatePercent)
@@ -191,7 +217,7 @@ public sealed class PipelineHealthService : IPipelineHealthService
         }
 
         return new PipelineHealthReport(
-            now, overall, lastCrawl, crawlStale, active, matched, unmatched, matchRate,
+            now, overall, lastCrawl, crawlStale, lastAggregate, aggregateStale, active, matched, unmatched, matchRate,
             segmentable, segmentableRate, segments, reliableSegments, models, activeHunts, qualifiedRate, recent, alerts);
     }
 }

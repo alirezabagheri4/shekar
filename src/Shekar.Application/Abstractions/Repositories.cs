@@ -205,3 +205,12 @@ public interface ICrawlRunRepository
     /// <summary>آخرین پاس‌های کراول (جدیدترین اول)؛ برای پایش سلامت خط لوله.</summary>
     Task<IReadOnlyList<CrawlRun>> ListRecentAsync(int take, CancellationToken ct = default);
 }
+
+public interface IAggregateRunRepository
+{
+    Task<AggregateRun> AddAsync(AggregateRun run, CancellationToken ct = default);
+    Task UpdateAsync(AggregateRun run, CancellationToken ct = default);
+
+    /// <summary>آخرین پاس‌های اگریگیشن (جدیدترین اول)؛ برای پایش سلامتِ داده‌سازی.</summary>
+    Task<IReadOnlyList<AggregateRun>> ListRecentAsync(int take, CancellationToken ct = default);
+}

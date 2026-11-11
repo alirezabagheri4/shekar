@@ -50,6 +50,7 @@ public static class DependencyInjection
         services.AddScoped<ISystemSettingRepository, EfSystemSettingRepository>();
         services.AddScoped<ICarListingRepository, EfCarListingRepository>();
         services.AddScoped<ICrawlRunRepository, EfCrawlRunRepository>();
+        services.AddScoped<IAggregateRunRepository, EfAggregateRunRepository>();
         services.AddScoped<IVehicleModelRepository, EfVehicleModelRepository>();
         services.AddScoped<IMarketSegmentStatRepository, EfMarketSegmentStatRepository>();
         services.AddScoped<IPaymentRepository, EfPaymentRepository>();

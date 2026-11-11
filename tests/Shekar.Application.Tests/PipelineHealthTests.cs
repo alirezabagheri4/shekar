@@ -20,7 +20,7 @@ public class PipelineHealthTests
     }
 
     private PipelineHealthService Build() => new(
-        new MockCrawlRunRepository(_store), new MockCarListingRepository(_store),
+        new MockCrawlRunRepository(_store), new MockAggregateRunRepository(_store), new MockCarListingRepository(_store),
         new MockMarketSegmentStatRepository(_store), new MockVehicleModelRepository(_store),
         new MockHuntRepository(_store, _clock), _clock);
 
@@ -77,6 +77,26 @@ public class PipelineHealthTests
         Assert.Equal(25, report.SegmentableListings);
         Assert.DoesNotContain(report.Alerts, a => a.Message.Contains("غنی‌سازی"));
         Assert.DoesNotContain(report.Alerts, a => a.Level == HealthLevel.Alarm);
+    }
+
+    [Fact]
+    public async Task Alarms_WhenLastAggregationFailed()
+    {
+        AddRecentSuccessfulCrawl(fetched: 25);
+        for (int i = 0; i < 25; i++)
+        {
+            AddActiveListing(vehicleModelId: 1, year: 1402);
+        }
+        _store.AggregateRuns.Add(new AggregateRun
+        {
+            Id = 1, StartedAt = _clock.UtcNow.AddMinutes(-5), FinishedAt = _clock.UtcNow.AddMinutes(-4),
+            Status = CrawlStatus.Failed, Error = "boom"
+        });
+
+        PipelineHealthReport report = await Build().GetAsync(new PipelineHealthOptions());
+
+        Assert.Equal(HealthLevel.Alarm, report.Overall);
+        Assert.Contains(report.Alerts, a => a.Level == HealthLevel.Alarm && a.Message.Contains("اگریگیشن"));
     }
 
     [Fact]

@@ -140,3 +140,23 @@ public sealed class CrawlRunConfiguration : IEntityTypeConfiguration<CrawlRun>
         b.HasIndex(x => new { x.Source, x.StartedAt });
     }
 }
+
+public sealed class AggregateRunConfiguration : IEntityTypeConfiguration<AggregateRun>
+{
+    public void Configure(EntityTypeBuilder<AggregateRun> b)
+    {
+        b.ToTable("AggregateRuns").HasComment("لاگ هر پاس اگریگیشن (نرمال‌سازی + ساخت سگمنت) برای پایش");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.StartedAt).HasComment("زمان شروع");
+        b.Property(x => x.FinishedAt).HasComment("زمان پایان");
+        b.Property(x => x.Status).HasConversion<byte>().HasComment("وضعیت: 1=درحال‌اجرا،2=موفق،3=خطا");
+        b.Property(x => x.NormalizedCount).HasComment("تعداد آگهیِ نرمال‌شده");
+        b.Property(x => x.AutoRegistered).HasComment("تعداد مدلِ رجیسترِ خودکار");
+        b.Property(x => x.UnmatchedCount).HasComment("تعداد بی‌تطبیق");
+        b.Property(x => x.SegmentCount).HasComment("تعداد کلِ سگمنت");
+        b.Property(x => x.ReliableSegmentCount).HasComment("تعداد سگمنتِ قابل‌اتکا");
+        b.Property(x => x.StaledCount).HasComment("تعداد سگمنتِ کهنه‌شده");
+        b.Property(x => x.Error).HasColumnType("nvarchar(max)").HasComment("پیام خطا");
+        b.HasIndex(x => x.StartedAt);
+    }
+}

@@ -473,6 +473,25 @@ CREATE TABLE dbo.CrawlRuns (
 CREATE INDEX IX_CrawlRuns_Source_Started ON dbo.CrawlRuns(Source, StartedAt);
 GO
 
+-- لاگ هر پاس اگریگیشن (نرمال‌سازی + ساخت سگمنت) برای پایشِ داده‌سازی
+CREATE TABLE dbo.AggregateRuns (
+    Id                   BIGINT         NOT NULL IDENTITY(1,1),      -- شناسه
+    StartedAt            DATETIMEOFFSET NOT NULL,                    -- زمان شروع
+    FinishedAt           DATETIMEOFFSET NULL,                        -- زمان پایان
+    [Status]             TINYINT        NOT NULL,                    -- 1=درحال‌اجرا،2=موفق،3=خطا
+    NormalizedCount      INT            NOT NULL CONSTRAINT DF_AR_Norm     DEFAULT(0), -- تعداد نرمال‌شده
+    AutoRegistered       INT            NOT NULL CONSTRAINT DF_AR_Auto     DEFAULT(0), -- رجیسترِ خودکار
+    UnmatchedCount       INT            NOT NULL CONSTRAINT DF_AR_Unm      DEFAULT(0), -- بی‌تطبیق
+    SegmentCount         INT            NOT NULL CONSTRAINT DF_AR_Seg      DEFAULT(0), -- کلِ سگمنت
+    ReliableSegmentCount INT            NOT NULL CONSTRAINT DF_AR_Rel      DEFAULT(0), -- سگمنتِ قابل‌اتکا
+    StaledCount          INT            NOT NULL CONSTRAINT DF_AR_Staled   DEFAULT(0), -- کهنه‌شده
+    Error                NVARCHAR(MAX)  NULL,                        -- پیام خطا
+    CONSTRAINT PK_AggregateRuns PRIMARY KEY (Id),
+    CONSTRAINT CK_AggregateRuns_Status CHECK ([Status] IN (1,2,3))
+);
+CREATE INDEX IX_AggregateRuns_StartedAt ON dbo.AggregateRuns(StartedAt);
+GO
+
 /* توضیحات جدول‌های پایپ‌لاین */
 EXEC sys.sp_addextendedproperty 'MS_Description', N'کاتالوگ خودرو + نقدشوندگیِ دستی هر مدل', 'SCHEMA','dbo','TABLE','VehicleModels';
 EXEC sys.sp_addextendedproperty 'MS_Description', N'آگهی‌های خام کراول‌شده پیش از اسکورینگ',   'SCHEMA','dbo','TABLE','CarListings';
