@@ -6,7 +6,8 @@ using Shekar.Domain.Enums;
 namespace Shekar.Application.Services;
 
 /// <summary>نتیجه‌ی یک پاس اسکورینگ.</summary>
-public sealed record ScoringRunResult(int Evaluated, int Qualified, int Created, int Updated, int Removed);
+public sealed record ScoringRunResult(
+    int Evaluated, int Qualified, int Created, int Updated, int Removed, int Suspicious, int Duplicates);
 
 /// <summary>اسکورینگ آگهی‌ها و جای‌گذاری در تاپ‌ها (مرحله ۳ پایپ‌لاین).</summary>
 public interface IListingScoringService
@@ -53,8 +54,10 @@ public sealed class ListingScoringService : IListingScoringService
             .Where(h => h.SourceListingId is not null)
             .ToDictionary(h => h.SourceListingId!.Value);
 
-        int evaluated = 0, qualified = 0, created = 0, updated = 0, removed = 0;
+        int evaluated = 0, qualified = 0, created = 0, updated = 0, removed = 0, suspicious = 0, duplicates = 0;
         var qualifyingListingIds = new HashSet<long>();
+        // اثرانگشتِ آگهی‌های سطح‌شده در این پاس؛ برای حذفِ نزدیک‌تکرارهای دلال (یک خودرو، چند آگهی).
+        var seenFingerprints = new HashSet<string>(StringComparer.Ordinal);
 
         foreach (CarListing listing in listings)
         {
@@ -82,12 +85,28 @@ public sealed class ListingScoringService : IListingScoringService
             listing.IsScored = true;
             await _listings.UpdateAsync(listing, ct);
 
+            if (r.IsSuspicious)
+            {
+                suspicious++; // زیربازارِ غیرمنطقی؛ سطح نمی‌شود (محافظِ کلاه‌برداری)
+                continue;
+            }
+
             if (!r.Qualifies)
             {
                 continue;
             }
 
             qualified++;
+
+            // دیدوپِ دلال: اگر خودروی هم‌مدل/سال/قیمت/محله در این پاس قبلاً سطح شده، دوباره نساز.
+            string fingerprint = $"{vmId}|{listing.ModelYear}|{listing.PriceToman}|{Common.TextNormalizer.Normalize(listing.RawLocation)}";
+            if (!seenFingerprints.Add(fingerprint))
+            {
+                duplicates++;
+                qualifyingListingIds.Add(listing.Id); // تا شکارِ موجودِ همین آگهی حذف/فلپ نشود
+                continue;
+            }
+
             qualifyingListingIds.Add(listing.Id);
 
             if (huntByListing.TryGetValue(listing.Id, out Hunt? existing))
@@ -117,7 +136,7 @@ public sealed class ListingScoringService : IListingScoringService
             }
         }
 
-        return new ScoringRunResult(evaluated, qualified, created, updated, removed);
+        return new ScoringRunResult(evaluated, qualified, created, updated, removed, suspicious, duplicates);
     }
 
     private static void Apply(Hunt hunt, CarListing l, MarketSegmentStat segment, ScoreResult r, DateTimeOffset now)

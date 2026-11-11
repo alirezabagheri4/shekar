@@ -75,6 +75,35 @@ public class ListingScoringTests
     }
 
     [Fact]
+    public async Task TooGoodToBeTrue_IsFlaggedSuspicious_NotHunt()
+    {
+        // ~۵۰٪ زیر بازار → مشکوک (کلاه‌برداری/اقساطی/تایپی)؛ نباید سطح شود.
+        var listing = AddListing(780_000_000);
+        AddSegment(listing, median: 1_560_000_000, samples: 8);
+
+        ScoringRunResult r = await Build().RunAsync(new ScoringOptions(), windowHours: 48);
+
+        Assert.Equal(1, r.Suspicious);
+        Assert.Equal(0, r.Qualified);
+        Assert.DoesNotContain(_store.Hunts, h => h.SourceListingId == listing.Id);
+    }
+
+    [Fact]
+    public async Task DealerReposts_AreDeduplicated()
+    {
+        // دو آگهیِ نزدیک‌تکرار (هم‌مدل/سال/قیمت/محله) → فقط یک شکار.
+        var a = AddListing(1_340_000_000);
+        var b = AddListing(1_340_000_000);
+        AddSegment(a, median: 1_560_000_000, samples: 8);
+
+        ScoringRunResult r = await Build().RunAsync(new ScoringOptions(), windowHours: 48);
+
+        Assert.Equal(2, r.Qualified);
+        Assert.Equal(1, r.Created);
+        Assert.Equal(1, r.Duplicates);
+    }
+
+    [Fact]
     public async Task FairlyPricedListing_DoesNotQualify()
     {
         // قیمت نزدیک میانه → زیر بازار ناچیز → واجد شرایط نیست.

@@ -31,7 +31,9 @@ public sealed class ScoreJob : IJob
         {
             MinBelowMarketPercent = _config.GetValue<int?>("Score:MinBelowMarketPercent") ?? 5,
             MinScore = _config.GetValue<int?>("Score:MinScore") ?? 60,
-            MinSamples = _config.GetValue<int?>("Score:MinSamples") ?? 3
+            MinSamples = _config.GetValue<int?>("Score:MinSamples") ?? 3,
+            SuspiciousBelowMarketPercent = _config.GetValue<int?>("Score:SuspiciousBelowMarketPercent") ?? 40,
+            ConfidenceFullAtSamples = _config.GetValue<int?>("Score:ConfidenceFullAtSamples") ?? 5
         };
 
         using IServiceScope scope = _scopeFactory.CreateScope();
@@ -39,7 +41,7 @@ public sealed class ScoreJob : IJob
         ScoringRunResult r = await scoring.RunAsync(options, windowHours, ct);
 
         _logger.LogInformation(
-            "اسکورینگ: ارزیابی {Evaluated}، واجد {Qualified}، ساخت {Created}، به‌روز {Updated}، حذف {Removed} تاپ",
-            r.Evaluated, r.Qualified, r.Created, r.Updated, r.Removed);
+            "اسکورینگ: ارزیابی {Evaluated}، واجد {Qualified}، ساخت {Created}، به‌روز {Updated}، حذف {Removed}، مشکوک {Suspicious}، تکراری {Duplicates}",
+            r.Evaluated, r.Qualified, r.Created, r.Updated, r.Removed, r.Suspicious, r.Duplicates);
     }
 }
