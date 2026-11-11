@@ -23,4 +23,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- دسترسیِ تستِ پارسر به اعضای internal (مثل ExtractPreloadedState). -->
+    <InternalsVisibleTo Include="Shekar.Infrastructure.Tests" />
+  </ItemGroup>
+
 </Project>

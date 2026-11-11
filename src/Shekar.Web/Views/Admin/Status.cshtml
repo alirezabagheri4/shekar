@@ -1,0 +1,107 @@
+@using Shekar.Application.Services
+@using Shekar.Domain.Entities
+@model PipelineHealthReport
+@{
+    ViewData["Title"] = "وضعیت خط لوله";
+    string card = "background: #fff; border: 1px solid #E5E7EB; border-radius: 16px; padding: 18px 20px";
+    string th = "text-align: right; font-size: 13px; color: #6B7280; font-weight: 700; padding: 10px 12px; border-bottom: 1px solid #EEF0F2; white-space: nowrap";
+    string td = "font-size: 14px; padding: 12px; border-bottom: 1px solid #F6F8F8; vertical-align: top; white-space: nowrap";
+
+    (string bg, string fg, string label) Badge(HealthLevel l) => l switch
+    {
+        HealthLevel.Alarm => ("#FEE2E2", "#DC2626", "بحرانی"),
+        HealthLevel.Warning => ("#FEF3C7", "#92400E", "هشدار"),
+        HealthLevel.Info => ("#E0F2FE", "#075985", "اطلاع"),
+        _ => ("#DCFCE7", "#166534", "سالم")
+    };
+
+    string StatLabel(string title, string value, string? hint = null) =>
+        $"<div style=\"flex:1;min-width:150px;background:#fff;border:1px solid #E5E7EB;border-radius:14px;padding:14px 16px\">" +
+        $"<div style=\"font-size:13px;color:#6B7280;font-weight:700\">{title}</div>" +
+        $"<div style=\"font-size:24px;font-weight:800;margin-top:4px\">{value}</div>" +
+        (hint is null ? "" : $"<div style=\"font-size:12px;color:#9CA3AF;margin-top:2px\">{hint}</div>") +
+        "</div>";
+
+    string CrawlStatusLabel(Shekar.Domain.Enums.CrawlStatus s) => s switch
+    {
+        Shekar.Domain.Enums.CrawlStatus.Succeeded => "موفق",
+        Shekar.Domain.Enums.CrawlStatus.Failed => "خطا",
+        _ => "در حال اجرا"
+    };
+
+    var overall = Badge(Model.Overall);
+}
+@section css {
+<link rel="stylesheet" href="~/css/desktop/base.css">
+}
+<div dir="rtl" style="font-family: Vazirmatn, Tahoma, sans-serif; color: #111827; background: #F6F8F8; min-height: 100vh">
+<header style="background: #fff; border-bottom: 1px solid #EEF0F2">
+<div style="max-width: 1100px; margin: 0 auto; padding: 0 24px; min-height: 64px; display: flex; align-items: center; gap: 12px">
+<a href="/" style="display: flex; align-items: center; gap: 8px; color: #111827"><svg width="30" height="30" viewBox="0 0 36 36" aria-hidden="true"><rect width="36" height="36" rx="10" fill="#0F766E"></rect><circle cx="18" cy="18" r="8.5" fill="none" stroke="#fff" stroke-width="3"></circle><circle cx="18" cy="18" r="3" fill="#D4A017"></circle></svg><b style="font-size: 18px">شکار</b></a>
+<span style="color: #6B7280; font-size: 14px">· پنل ادمین · وضعیت</span>
+<a href="/admin/payments" style="margin-inline-start:auto;color:#0F766E;font-weight:700;font-size:14px">پرداخت‌ها ←</a>
+</div>
+</header>
+<main style="max-width: 1100px; margin: 0 auto; padding: 28px 24px 64px; display: flex; flex-direction: column; gap: 24px">
+<div style="display:flex;align-items:center;gap:12px">
+<h1 style="margin: 0; font-size: 26px; font-weight: 800">وضعیت خط لوله</h1>
+<span style="background:@overall.bg;color:@overall.fg;font-size:14px;font-weight:800;padding:5px 14px;border-radius:999px">@overall.label</span>
+<span style="margin-inline-start:auto;color:#9CA3AF;font-size:13px">به‌روزرسانی: @ViewFormat.Digits(Model.GeneratedAt.ToOffset(TimeSpan.FromHours(3.5)).ToString("HH:mm"))</span>
+</div>
+
+<section style="@card">
+<b style="font-size: 17px; display: block; margin-bottom: 12px">هشدارها</b>
+<div style="display:flex;flex-direction:column;gap:8px">
+@foreach (var a in Model.Alerts)
+{
+    var b = Badge(a.Level);
+    <div style="display:flex;align-items:flex-start;gap:10px;background:@b.bg;border-radius:12px;padding:10px 14px">
+    <span style="color:@b.fg;font-weight:800;font-size:13px;white-space:nowrap">@b.label</span>
+    <span style="color:#374151;font-size:14px">@a.Message</span>
+    </div>
+}
+</div>
+</section>
+
+<div style="display:flex;flex-wrap:wrap;gap:12px">
+@Html.Raw(StatLabel("آگهی فعال", ViewFormat.Digits(Model.ActiveListings.ToString())))
+@Html.Raw(StatLabel("نرمال‌شده", ViewFormat.Digits(Model.MatchedListings.ToString()), $"نرخ تطبیق {ViewFormat.Digits(Model.MatchRatePercent.ToString())}٪"))
+@Html.Raw(StatLabel("بی‌تطبیق", ViewFormat.Digits(Model.UnmatchedListings.ToString())))
+@Html.Raw(StatLabel("سگمنت بازار", ViewFormat.Digits(Model.Segments.ToString())))
+@Html.Raw(StatLabel("مدلِ ثبت‌شده", ViewFormat.Digits(Model.RegisteredModels.ToString())))
+@Html.Raw(StatLabel("شکار فعال", ViewFormat.Digits(Model.ActiveHunts.ToString()), $"از نرمال‌شده‌ها {ViewFormat.Digits(Model.QualifiedRatePercent.ToString())}٪"))
+</div>
+
+<section style="@card">
+<b style="font-size: 17px; display: block; margin-bottom: 12px">پاس‌های اخیر کراول</b>
+@if (Model.RecentCrawls.Count == 0)
+{
+<p style="color: #6B7280; font-size: 14px; margin: 8px 0">هنوز هیچ پاسِ کراولی ثبت نشده است.</p>
+}
+else
+{
+<div style="overflow-x: auto">
+<table style="width: 100%; border-collapse: collapse; min-width: 720px">
+<thead><tr>
+<th style="@th">شروع</th><th style="@th">وضعیت</th><th style="@th">دریافت</th><th style="@th">ذخیره</th><th style="@th">ردشده</th><th style="@th">حذف</th><th style="@th">خطا</th>
+</tr></thead>
+<tbody>
+@foreach (CrawlRun r in Model.RecentCrawls)
+{
+<tr>
+<td style="@td">@ViewFormat.RelativeTime(r.StartedAt, Model.GeneratedAt)</td>
+<td style="@td">@CrawlStatusLabel(r.Status)@(string.IsNullOrEmpty(r.Error) ? "" : $" — {r.Error}")</td>
+<td style="@td">@ViewFormat.Digits(r.FetchedCount.ToString())</td>
+<td style="@td">@ViewFormat.Digits(r.SavedCount.ToString())</td>
+<td style="@td">@ViewFormat.Digits(r.SkippedCount.ToString())</td>
+<td style="@td">@ViewFormat.Digits(r.RemovedCount.ToString())</td>
+<td style="@td">@ViewFormat.Digits(r.ErrorCount.ToString())</td>
+</tr>
+}
+</tbody>
+</table>
+</div>
+}
+</section>
+</main>
+</div>

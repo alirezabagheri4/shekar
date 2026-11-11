@@ -192,4 +192,7 @@ public interface ICrawlRunRepository
 {
     Task<CrawlRun> AddAsync(CrawlRun run, CancellationToken ct = default);
     Task UpdateAsync(CrawlRun run, CancellationToken ct = default);
+
+    /// <summary>آخرین پاس‌های کراول (جدیدترین اول)؛ برای پایش سلامت خط لوله.</summary>
+    Task<IReadOnlyList<CrawlRun>> ListRecentAsync(int take, CancellationToken ct = default);
 }

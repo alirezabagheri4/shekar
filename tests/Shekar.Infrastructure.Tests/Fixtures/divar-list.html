@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><title>خودرو | دیوار تهران</title></head>
+<body>
+<div id="app"></div>
+<script>
+// نمونه‌ی ساختاریِ صفحه‌ی لیستِ دیوار (دسته‌ی خودرو). هم‌شکلِ خروجیِ واقعی سرور است
+// (window.__PRELOADED_STATE__ با گره‌های PostRowData). برای تستِ رگرسیونِ پارسر.
+window.__PRELOADED_STATE__ = {
+  "search": {
+    "result": {
+      "widgetList": [
+        {
+          "@type": "post.v1.widgets.PostRowData",
+          "token": "AbC12345",
+          "title": "پژو ۲۰۶ تیپ ۲ مدل ۱۳۹۶",
+          "middle_description_text": "۴۵۰,۰۰۰,۰۰۰ تومان",
+          "top_description_text": "۱۲۰,۰۰۰ کیلومتر",
+          "image_url": "https://s100.divarcdn.com/static/photo/sample-1.jpg",
+          "image_count": 4,
+          "action": {
+            "type": "VIEW_POST",
+            "payload": {
+              "token": "AbC12345",
+              "web_info": { "city_persian": "تهران", "district_persian": "پیروزی" }
+            }
+          }
+        },
+        {
+          "@type": "post.v1.widgets.PostRowData",
+          "token": "XyZ98765",
+          "title": "سمند LX مدل ۱۳۹۹",
+          "middle_description_text": "۵۲۰,۰۰۰,۰۰۰ تومان",
+          "top_description_text": "۸۵,۰۰۰ کیلومتر",
+          "image_url": "https://s100.divarcdn.com/static/photo/sample-2.jpg",
+          "image_count": 6,
+          "action": {
+            "type": "VIEW_POST",
+            "payload": {
+              "token": "XyZ98765",
+              "web_info": { "city_persian": "تهران", "district_persian": "نارمک" }
+            }
+          }
+        }
+      ]
+    }
+  }
+};
+</script>
+</body>
+</html>

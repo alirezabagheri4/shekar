@@ -113,4 +113,16 @@ public sealed class MockCrawlRunRepository : ICrawlRunRepository
     }
 
     public Task UpdateAsync(CrawlRun run, CancellationToken ct = default) => Task.CompletedTask;
+
+    public Task<IReadOnlyList<CrawlRun>> ListRecentAsync(int take, CancellationToken ct = default)
+    {
+        lock (_store.Gate)
+        {
+            IReadOnlyList<CrawlRun> recent = _store.CrawlRuns
+                .OrderByDescending(r => r.StartedAt)
+                .Take(Math.Max(0, take))
+                .ToList();
+            return Task.FromResult(recent);
+        }
+    }
 }

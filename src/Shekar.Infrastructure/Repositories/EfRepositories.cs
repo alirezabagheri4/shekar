@@ -438,6 +438,13 @@ public sealed class EfCrawlRunRepository : ICrawlRunRepository
         _db.CrawlRuns.Update(run);
         await _db.SaveChangesAsync(ct);
     }
+
+    public async Task<IReadOnlyList<CrawlRun>> ListRecentAsync(int take, CancellationToken ct = default) =>
+        await _db.CrawlRuns
+            .AsNoTracking()
+            .OrderByDescending(r => r.StartedAt)
+            .Take(Math.Max(0, take))
+            .ToListAsync(ct);
 }
 
 public sealed class EfPaymentRepository : IPaymentRepository

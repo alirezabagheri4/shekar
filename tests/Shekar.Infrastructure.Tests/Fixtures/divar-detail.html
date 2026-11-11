@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head><meta charset="utf-8"><title>پژو ۲۰۶ تیپ ۲ | دیوار</title></head>
+<body>
+<div id="app"></div>
+<script>
+// نمونه‌ی ساختاریِ صفحه‌ی جزئیاتِ دیوار (/v/{token}). هم‌شکلِ خروجیِ واقعی است:
+// currentPost.post.webengage.brand_model + ردیف‌های مشخصات {title,value}. برای تستِ پارسر.
+window.__PRELOADED_STATE__ = {
+  "currentPost": {
+    "post": {
+      "token": "AbC12345",
+      "webengage": {
+        "brand_model": "Peugeot 206 2-normal",
+        "category": "light"
+      },
+      "sections": [
+        {
+          "@type": "post_page.v1.Group",
+          "widgets": [
+            { "@type": "post_page.v1.UnexpandableRow", "title": "مدل (سال تولید)", "value": "۱۳۹۶ - ۲۰۱۷" },
+            { "@type": "post_page.v1.UnexpandableRow", "title": "کارکرد", "value": "۱۲۰,۰۰۰ کیلومتر" },
+            { "@type": "post_page.v1.UnexpandableRow", "title": "رنگ", "value": "سفید" }
+          ]
+        },
+        {
+          "@type": "post_page.v1.Group",
+          "widgets": [
+            { "@type": "post_page.v1.GroupInfoRow", "title": "برند و مدل", "value": "پژو ۲۰۶ تیپ ۲" },
+            { "@type": "post_page.v1.UnexpandableRow", "title": "قیمت پایه", "value": "۴۴۰,۰۰۰,۰۰۰ تومان" }
+          ]
+        }
+      ]
+    }
+  }
+};
+</script>
+</body>
+</html>

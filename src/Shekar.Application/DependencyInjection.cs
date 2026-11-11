@@ -33,6 +33,7 @@ public static class DependencyInjection
         services.AddScoped<IMarketAggregationService, MarketAggregationService>();
         services.AddSingleton<IHuntScorer, HuntScorer>();
         services.AddScoped<IListingScoringService, ListingScoringService>();
+        services.AddScoped<IPipelineHealthService, PipelineHealthService>();
         return services;
     }
 }

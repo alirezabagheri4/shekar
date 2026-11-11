@@ -17,6 +17,8 @@ public class AdminController : Controller
     private readonly IReceiptStorage _storage;
     private readonly IAdminAuthorizer _admin;
     private readonly ICurrentUser _currentUser;
+    private readonly IPipelineHealthService _health;
+    private readonly IConfiguration _config;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
@@ -25,6 +27,8 @@ public class AdminController : Controller
         IReceiptStorage storage,
         IAdminAuthorizer admin,
         ICurrentUser currentUser,
+        IPipelineHealthService health,
+        IConfiguration config,
         ILogger<AdminController> logger)
     {
         _payments = payments;
@@ -32,7 +36,30 @@ public class AdminController : Controller
         _storage = storage;
         _admin = admin;
         _currentUser = currentUser;
+        _health = health;
+        _config = config;
         _logger = logger;
+    }
+
+    /// <summary>صفحه‌ی وضعیتِ خط لوله: سلامتِ کراول/نرمال‌سازی/اسکورینگ و هشدارهای عملیاتی.</summary>
+    [HttpGet("status")]
+    public async Task<IActionResult> Status(CancellationToken ct)
+    {
+        if (!await _admin.IsAdminAsync(ct))
+        {
+            return NotFound();
+        }
+
+        var options = new PipelineHealthOptions
+        {
+            StaleCrawlHours = _config.GetValue<int?>("Health:StaleCrawlHours") ?? 6,
+            MinMatchRatePercent = _config.GetValue<int?>("Health:MinMatchRatePercent") ?? 50,
+            MinListingsForRate = _config.GetValue<int?>("Health:MinListingsForRate") ?? 20,
+            RecentRuns = _config.GetValue<int?>("Health:RecentRuns") ?? 10
+        };
+
+        PipelineHealthReport report = await _health.GetAsync(options, ct);
+        return View(report);
     }
 
     [HttpGet("payments")]
