@@ -71,6 +71,7 @@
 @Html.Raw(StatLabel("سگمنت بازار", ViewFormat.Digits(Model.Segments.ToString()), $"قابل‌اتکا {ViewFormat.Digits(Model.ReliableSegments.ToString())}"))
 @Html.Raw(StatLabel("مدلِ ثبت‌شده", ViewFormat.Digits(Model.RegisteredModels.ToString())))
 @Html.Raw(StatLabel("شکار فعال", ViewFormat.Digits(Model.ActiveHunts.ToString()), $"از سگمنت‌پذیرها {ViewFormat.Digits(Model.QualifiedRatePercent.ToString())}٪"))
+@Html.Raw(StatLabel("نقدشوندگیِ مدل", ViewFormat.Digits(Model.LiquidityModels.ToString()), $"قابل‌اتکا {ViewFormat.Digits(Model.ReliableLiquidityModels.ToString())} · میانه‌ی روز {ViewFormat.Digits(Model.MedianDomDays.ToString())}"))
 </div>
 
 <section style="@card">

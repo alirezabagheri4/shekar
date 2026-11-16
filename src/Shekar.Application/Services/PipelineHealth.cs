@@ -1,4 +1,5 @@
 using Shekar.Application.Abstractions;
+using Shekar.Application.Common;
 using Shekar.Domain.Entities;
 using Shekar.Domain.Enums;
 
@@ -68,7 +69,10 @@ public sealed record PipelineHealthReport(
     int ActiveHunts,
     int QualifiedRatePercent,
     IReadOnlyList<CrawlRun> RecentCrawls,
-    IReadOnlyList<HealthAlert> Alerts);
+    IReadOnlyList<HealthAlert> Alerts,
+    int LiquidityModels = 0,
+    int ReliableLiquidityModels = 0,
+    int MedianDomDays = 0);
 
 /// <summary>
 /// سلامتِ خط لوله را از وضعیتِ فعلیِ مخازن می‌سنجد و هشدارهای عملیاتی می‌سازد
@@ -85,18 +89,21 @@ public sealed class PipelineHealthService : IPipelineHealthService
     private readonly IAggregateRunRepository _aggRuns;
     private readonly ICarListingRepository _listings;
     private readonly IMarketSegmentStatRepository _stats;
+    private readonly IModelLiquidityStatRepository _liquidity;
     private readonly IVehicleModelRepository _models;
     private readonly IHuntRepository _hunts;
     private readonly IClock _clock;
 
     public PipelineHealthService(
         ICrawlRunRepository runs, IAggregateRunRepository aggRuns, ICarListingRepository listings,
-        IMarketSegmentStatRepository stats, IVehicleModelRepository models, IHuntRepository hunts, IClock clock)
+        IMarketSegmentStatRepository stats, IModelLiquidityStatRepository liquidity,
+        IVehicleModelRepository models, IHuntRepository hunts, IClock clock)
     {
         _runs = runs;
         _aggRuns = aggRuns;
         _listings = listings;
         _stats = stats;
+        _liquidity = liquidity;
         _models = models;
         _hunts = hunts;
         _clock = clock;
@@ -123,6 +130,15 @@ public sealed class PipelineHealthService : IPipelineHealthService
         IReadOnlyList<MarketSegmentStat> allStats = await _stats.ListAsync(ct);
         int segments = allStats.Count;
         int reliableSegments = allStats.Count(s => s.IsReliable);
+
+        // نقدشوندگیِ داده‌محور: پوشش (چند مدل آمار دارند/قابل‌اتکا) و میانه‌ی روزهای‌روی‌بازارِ مدل‌های قابل‌اتکا.
+        IReadOnlyList<ModelLiquidityStat> allLiquidity = await _liquidity.ListAsync(ct);
+        int liquidityModels = allLiquidity.Count;
+        List<ModelLiquidityStat> reliableLiquidity = allLiquidity.Where(s => s.IsReliable).ToList();
+        int reliableLiquidityModels = reliableLiquidity.Count;
+        int medianDomDays = reliableLiquidity.Count > 0
+            ? (int)Statistics.Median(reliableLiquidity.Select(s => (long)s.MedianDomDays).ToList())
+            : 0;
         int models = (await _models.ListActiveAsync(ct)).Count;
         int activeHunts = (await _hunts.ListPipelineAsync(ct)).Count(h => h.State == HuntState.Active);
         // نرخِ واجدشرایط را نسبت به «سگمنت‌پذیر» می‌سنجیم چون ورودیِ واقعیِ اسکورینگ همان است.
@@ -210,6 +226,13 @@ public sealed class PipelineHealthService : IPipelineHealthService
                 "سگمنتِ قابل‌اتکا هست ولی هیچ شکارِ فعالی نیست — یا بازار منصفانه قیمت خورده یا آستانه‌ها سخت‌اند."));
         }
 
+        // نقدشوندگیِ داده‌محور دیر انباشته می‌شود (نیازمندِ حذفِ کافی در طول زمان). تا آن‌وقت از کاتالوگ استفاده می‌شود.
+        if (matched >= options.MinListingsForRate && liquidityModels > 0 && reliableLiquidityModels == 0)
+        {
+            alerts.Add(new HealthAlert(HealthLevel.Info,
+                "نقدشوندگیِ داده‌محور هنوز قابل‌اتکا نیست (حذفِ کافی ثبت نشده) — فعلاً از نقدشوندگیِ کاتالوگ استفاده می‌شود."));
+        }
+
         HealthLevel overall = alerts.Count == 0 ? HealthLevel.Ok : alerts.Max(a => a.Level);
         if (alerts.Count == 0)
         {
@@ -218,6 +241,7 @@ public sealed class PipelineHealthService : IPipelineHealthService
 
         return new PipelineHealthReport(
             now, overall, lastCrawl, crawlStale, lastAggregate, aggregateStale, active, matched, unmatched, matchRate,
-            segmentable, segmentableRate, segments, reliableSegments, models, activeHunts, qualifiedRate, recent, alerts);
+            segmentable, segmentableRate, segments, reliableSegments, models, activeHunts, qualifiedRate, recent, alerts,
+            liquidityModels, reliableLiquidityModels, medianDomDays);
     }
 }

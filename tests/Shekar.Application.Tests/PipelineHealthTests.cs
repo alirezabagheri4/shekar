@@ -21,8 +21,8 @@ public class PipelineHealthTests
 
     private PipelineHealthService Build() => new(
         new MockCrawlRunRepository(_store), new MockAggregateRunRepository(_store), new MockCarListingRepository(_store),
-        new MockMarketSegmentStatRepository(_store), new MockVehicleModelRepository(_store),
-        new MockHuntRepository(_store, _clock), _clock);
+        new MockMarketSegmentStatRepository(_store), new MockModelLiquidityStatRepository(_store),
+        new MockVehicleModelRepository(_store), new MockHuntRepository(_store, _clock), _clock);
 
     private void AddRecentSuccessfulCrawl(int fetched)
     {
@@ -105,5 +105,47 @@ public class PipelineHealthTests
         // بدون هیچ پاسِ کراول → بحرانی.
         PipelineHealthReport report = await Build().GetAsync(new PipelineHealthOptions());
         Assert.Equal(HealthLevel.Alarm, report.Overall);
+    }
+
+    [Fact]
+    public async Task ReportsLiquidityCoverage_AndMedianDom_OfReliableModels()
+    {
+        _store.ModelLiquidityStats.Add(new ModelLiquidityStat
+        {
+            Id = 1, VehicleModelId = 1, SampleCount = 20, RemovedCount = 8,
+            MedianDomDays = 12, RemovalRatePercent = 40, IsReliable = true, ComputedAt = _clock.UtcNow
+        });
+        _store.ModelLiquidityStats.Add(new ModelLiquidityStat
+        {
+            Id = 2, VehicleModelId = 2, SampleCount = 6, RemovedCount = 2,
+            MedianDomDays = 30, RemovalRatePercent = 33, IsReliable = false, ComputedAt = _clock.UtcNow
+        });
+
+        PipelineHealthReport report = await Build().GetAsync(new PipelineHealthOptions());
+
+        Assert.Equal(2, report.LiquidityModels);
+        Assert.Equal(1, report.ReliableLiquidityModels);
+        Assert.Equal(12, report.MedianDomDays); // فقط از مدل‌های قابل‌اتکا
+    }
+
+    [Fact]
+    public async Task InfoAlert_WhenLiquidityDataExists_ButNotYetReliable()
+    {
+        AddRecentSuccessfulCrawl(fetched: 25);
+        for (int i = 0; i < 25; i++)
+        {
+            AddActiveListing(vehicleModelId: 1, year: 1402);
+        }
+        _store.ModelLiquidityStats.Add(new ModelLiquidityStat
+        {
+            Id = 1, VehicleModelId = 1, SampleCount = 25, RemovedCount = 2,
+            MedianDomDays = 8, RemovalRatePercent = 8, IsReliable = false, ComputedAt = _clock.UtcNow
+        });
+
+        PipelineHealthReport report = await Build().GetAsync(new PipelineHealthOptions());
+
+        Assert.Equal(1, report.LiquidityModels);
+        Assert.Equal(0, report.ReliableLiquidityModels);
+        Assert.Contains(report.Alerts, a => a.Level == HealthLevel.Info && a.Message.Contains("نقدشوندگیِ داده‌محور"));
     }
 }
