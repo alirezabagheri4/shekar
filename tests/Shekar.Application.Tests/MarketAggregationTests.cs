@@ -21,7 +21,7 @@ public class MarketAggregationTests
 
     private MarketAggregationService Build() => new(
         new MockCarListingRepository(_store), new MockVehicleModelRepository(_store),
-        new MockMarketSegmentStatRepository(_store), _clock);
+        new MockMarketSegmentStatRepository(_store), new MockModelLiquidityStatRepository(_store), _clock);
 
     private void AddListing(int vmId, int year, int? mileage, long price, BodyCondition body, string? color)
     {
@@ -33,6 +33,23 @@ public class MarketAggregationTests
             PriceToman = price, BodyCondition = body, Color = color,
             State = ListingState.Active, PublishedAt = _clock.UtcNow.AddHours(-1),
             FetchedAt = _clock.UtcNow, LastSeenAt = _clock.UtcNow
+        });
+    }
+
+    /// <summary>آگهیِ حذف‌شده با عمرِ مشخص (روز) تا تشخیصِ حذف؛ برای آمارِ روزهای‌روی‌بازار (DOM).</summary>
+    private void AddRemovedListing(int vmId, int year, long price, int domDays)
+    {
+        _store.CarListings.Add(new CarListing
+        {
+            Id = _store.CarListings.Select(l => l.Id).DefaultIfEmpty(0).Max() + 1,
+            Source = ListingSource.Divar, ExternalId = Guid.NewGuid().ToString(),
+            Title = "x", VehicleModelId = vmId, ModelYear = year, MileageKm = 10_000,
+            PriceToman = price, BodyCondition = BodyCondition.Healthy, Color = null,
+            State = ListingState.Removed,
+            PublishedAt = _clock.UtcNow.AddDays(-domDays - 1),
+            FetchedAt = _clock.UtcNow.AddDays(-domDays - 1),
+            LastSeenAt = _clock.UtcNow.AddDays(-1),
+            RemovedAt = _clock.UtcNow.AddDays(-1)
         });
     }
 
@@ -224,5 +241,70 @@ public class MarketAggregationTests
         var l1 = _store.MarketSegmentStats.Single(s => s.Level == 1);
         Assert.Null(l1.ColorKey);
         Assert.Equal(2, l1.RawSampleCount);
+    }
+
+    [Fact]
+    public async Task Liquidity_ComputesMedianDom_AndRemovalRate_AndMarksReliable()
+    {
+        // ۵ آگهیِ حذف‌شده‌ی مدل ۱ با DOMهای ۵/۱۰/۱۵/۲۰/۲۵ → میانه‌ی ۱۵، نرخِ حذفِ ۱۰۰٪، قابل‌اتکا.
+        foreach (int dom in new[] { 5, 10, 15, 20, 25 })
+        {
+            AddRemovedListing(1, 1402, 1_000_000_000, dom);
+        }
+
+        AggregationResult r = await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        Assert.Equal(1, r.LiquidityModels);
+        Assert.Equal(1, r.ReliableLiquidity);
+        var liq = _store.ModelLiquidityStats.Single(s => s.VehicleModelId == 1);
+        Assert.Equal(5, liq.SampleCount);
+        Assert.Equal(5, liq.RemovedCount);
+        Assert.Equal(0, liq.ActiveCount);
+        Assert.Equal(15, liq.MedianDomDays);
+        Assert.Equal(100, liq.RemovalRatePercent);
+        Assert.True(liq.IsReliable);
+    }
+
+    [Fact]
+    public async Task Liquidity_ThinData_IsNotReliable_ButStillComputed()
+    {
+        // فقط ۲ حذف + ۴ فعال → زیرِ آستانه‌ی ۵ حذف → غیرقابل‌اتکا (ولی آمار ساخته می‌شود).
+        AddRemovedListing(1, 1402, 1_000_000_000, 5);
+        AddRemovedListing(1, 1402, 1_000_000_000, 9);
+        for (int i = 0; i < 4; i++)
+        {
+            AddListing(1, 1402, 10_000, 1_000_000_000, BodyCondition.Healthy, null);
+        }
+
+        AggregationResult r = await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        Assert.Equal(1, r.LiquidityModels);
+        Assert.Equal(0, r.ReliableLiquidity);
+        var liq = _store.ModelLiquidityStats.Single(s => s.VehicleModelId == 1);
+        Assert.Equal(6, liq.SampleCount);
+        Assert.Equal(2, liq.RemovedCount);
+        Assert.Equal(4, liq.ActiveCount);
+        Assert.Equal(33, liq.RemovalRatePercent);
+        Assert.False(liq.IsReliable);
+    }
+
+    [Fact]
+    public async Task Liquidity_Censoring_DomIgnoresStillActive()
+    {
+        // همه فعال (هنوز نفروخته) → DOM محاسبه نمی‌شود؛ فقط کوهورت و فعال‌ها ثبت می‌شوند.
+        for (int i = 0; i < 6; i++)
+        {
+            AddListing(1, 1402, 10_000, 1_000_000_000, BodyCondition.Healthy, null);
+        }
+
+        await Build().RunAsync(windowDays: 30, new AggregationOptions());
+
+        var liq = _store.ModelLiquidityStats.Single(s => s.VehicleModelId == 1);
+        Assert.Equal(6, liq.SampleCount);
+        Assert.Equal(0, liq.RemovedCount);
+        Assert.Equal(6, liq.ActiveCount);
+        Assert.Equal(0, liq.MedianDomDays);
+        Assert.Equal(0, liq.RemovalRatePercent);
+        Assert.False(liq.IsReliable);
     }
 }

@@ -197,6 +197,13 @@ public interface IMarketSegmentStatRepository
     Task UpsertAsync(MarketSegmentStat stat, CancellationToken ct = default);
 }
 
+public interface IModelLiquidityStatRepository
+{
+    Task<ModelLiquidityStat?> GetByModelIdAsync(int vehicleModelId, CancellationToken ct = default);
+    Task<IReadOnlyList<ModelLiquidityStat>> ListAsync(CancellationToken ct = default);
+    Task UpsertAsync(ModelLiquidityStat stat, CancellationToken ct = default);
+}
+
 public interface ICrawlRunRepository
 {
     Task<CrawlRun> AddAsync(CrawlRun run, CancellationToken ct = default);

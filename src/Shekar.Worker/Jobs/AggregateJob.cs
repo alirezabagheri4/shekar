@@ -35,7 +35,8 @@ public sealed class AggregateJob : IJob
         {
             MinReliableSamples = _config.GetValue<int?>("Aggregate:MinReliableSamples") ?? 5,
             MaxReliableSpreadPercent = _config.GetValue<int?>("Aggregate:MaxReliableSpreadPercent") ?? 60,
-            RecencyHalfLifeDays = _config.GetValue<double?>("Aggregate:RecencyHalfLifeDays") ?? 14
+            RecencyHalfLifeDays = _config.GetValue<double?>("Aggregate:RecencyHalfLifeDays") ?? 14,
+            MinReliableRemovals = _config.GetValue<int?>("Aggregate:MinReliableRemovals") ?? 5
         };
 
         using IServiceScope scope = _scopeFactory.CreateScope();
@@ -57,8 +58,8 @@ public sealed class AggregateJob : IJob
             run.Status = CrawlStatus.Succeeded;
 
             _logger.LogInformation(
-                "اگریگیشن: نرمال‌سازی {Matched} (رجیستر خودکار {Auto})، بی‌تطبیق {Unmatched}، سگمنت {Segments} (قابل‌اتکا {Reliable}، کهنه‌شده {Staled})",
-                norm.Matched, norm.AutoRegistered, norm.Unmatched, agg.Segments, agg.Reliable, agg.Staled);
+                "اگریگیشن: نرمال‌سازی {Matched} (رجیستر خودکار {Auto})، بی‌تطبیق {Unmatched}، سگمنت {Segments} (قابل‌اتکا {Reliable}، کهنه‌شده {Staled})، نقدشوندگیِ مدل {LiqModels} (قابل‌اتکا {LiqReliable})",
+                norm.Matched, norm.AutoRegistered, norm.Unmatched, agg.Segments, agg.Reliable, agg.Staled, agg.LiquidityModels, agg.ReliableLiquidity);
 
             if (norm.UnmatchedSamples.Count > 0)
             {

@@ -20,10 +20,17 @@ public sealed record AggregationOptions
     /// قیمتِ زنده‌ی امروز وزنِ کامل؛ آگهیِ حذف‌شده‌ی قدیمی کم‌رنگ. در بازارِ تورمی مرجع را به‌روز نگه می‌دارد.
     /// </summary>
     public double RecencyHalfLifeDays { get; init; } = 14;
+
+    /// <summary>
+    /// حداقل تعداد آگهیِ حذف‌شده (DOMِ معتبر) برای «قابل‌اتکا» بودنِ نقدشوندگیِ یک مدل. مدلِ کم‌حذف
+    /// شواهدِ کافی برای برآوردِ سرعتِ فروش ندارد و در گامِ مصرف باید به کاتالوگ تکیه کند.
+    /// </summary>
+    public int MinReliableRemovals { get; init; } = 5;
 }
 
 /// <summary>نتیجه‌ی یک پاس اگریگیشن (برای پایش).</summary>
-public sealed record AggregationResult(int Segments, int Reliable, int Staled);
+public sealed record AggregationResult(
+    int Segments, int Reliable, int Staled, int LiquidityModels = 0, int ReliableLiquidity = 0);
 
 /// <summary>ساخت آمار سگمنت‌های بازار (مرحله ۲ پایپ‌لاین، ساعتی).</summary>
 public interface IMarketAggregationService
@@ -44,15 +51,17 @@ public sealed class MarketAggregationService : IMarketAggregationService
     private readonly ICarListingRepository _listings;
     private readonly IVehicleModelRepository _models;
     private readonly IMarketSegmentStatRepository _stats;
+    private readonly IModelLiquidityStatRepository _liquidity;
     private readonly IClock _clock;
 
     public MarketAggregationService(
         ICarListingRepository listings, IVehicleModelRepository models,
-        IMarketSegmentStatRepository stats, IClock clock)
+        IMarketSegmentStatRepository stats, IModelLiquidityStatRepository liquidity, IClock clock)
     {
         _listings = listings;
         _models = models;
         _stats = stats;
+        _liquidity = liquidity;
         _clock = clock;
     }
 
@@ -170,7 +179,75 @@ public sealed class MarketAggregationService : IMarketAggregationService
             }
         }
 
-        return new AggregationResult(currentKeys.Count, reliable, staled);
+        // نقدشوندگیِ داده‌محور در سطحِ مدل (از همان آگهی‌های بارگذاری‌شده؛ بدونِ کوئریِ اضافه).
+        (int liqModels, int liqReliable) = await BuildLiquidityAsync(listings, options, now, windowDays, ct);
+
+        return new AggregationResult(currentKeys.Count, reliable, staled, liqModels, liqReliable);
+    }
+
+    /// <summary>
+    /// آمارِ نقدشوندگی را در سطحِ هر مدل از آگهی‌های پنجره می‌سازد و upsert می‌کند: روزهای‌روی‌بازار (DOM)
+    /// روی حذف‌شده‌ها (پراکسیِ فروش) و نرخِ حذف. تعدادِ فعال‌ها برای لحاظِ سانسور نگه داشته می‌شود.
+    /// حذف ≠ فروش در سطحِ تک‌آگهی نویزی است؛ در سطحِ تجمیعیِ مدل پراکسیِ نسبیِ معتبری‌ست.
+    /// </summary>
+    private async Task<(int Models, int Reliable)> BuildLiquidityAsync(
+        IReadOnlyList<CarListing> listings, AggregationOptions options,
+        DateTimeOffset now, int windowDays, CancellationToken ct)
+    {
+        var byModel = new Dictionary<int, List<CarListing>>();
+        foreach (CarListing l in listings)
+        {
+            if (l.VehicleModelId is not { } vmId)
+            {
+                continue;
+            }
+            if (!byModel.TryGetValue(vmId, out List<CarListing>? cohort))
+            {
+                cohort = new List<CarListing>();
+                byModel[vmId] = cohort;
+            }
+            cohort.Add(l);
+        }
+
+        int models = 0, reliable = 0;
+        foreach ((int vmId, List<CarListing> cohort) in byModel)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            int total = cohort.Count;
+            var domDays = new List<long>();
+            foreach (CarListing l in cohort)
+            {
+                if (l.State == ListingState.Removed && l.RemovedAt is { } removedAt)
+                {
+                    domDays.Add((long)Math.Round(Math.Max(0, (removedAt - l.PublishedAt).TotalDays)));
+                }
+            }
+
+            int removed = domDays.Count;
+            bool isReliable = removed >= options.MinReliableRemovals;
+
+            ModelLiquidityStat stat = await _liquidity.GetByModelIdAsync(vmId, ct) ?? new ModelLiquidityStat();
+            stat.VehicleModelId = vmId;
+            stat.WindowDays = windowDays;
+            stat.SampleCount = total;
+            stat.RemovedCount = removed;
+            stat.ActiveCount = total - removed;
+            stat.MedianDomDays = domDays.Count > 0 ? (int)Statistics.Median(domDays) : 0;
+            stat.P25DomDays = domDays.Count > 0 ? (int)Statistics.Percentile(domDays, 25) : 0;
+            stat.RemovalRatePercent = total > 0 ? (int)Math.Round(removed * 100.0 / total) : 0;
+            stat.IsReliable = isReliable;
+            stat.ComputedAt = now;
+            await _liquidity.UpsertAsync(stat, ct);
+
+            models++;
+            if (isReliable)
+            {
+                reliable++;
+            }
+        }
+
+        return (models, reliable);
     }
 
     private static void Accumulate(

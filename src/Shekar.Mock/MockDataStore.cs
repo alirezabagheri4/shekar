@@ -31,6 +31,7 @@ public sealed class MockDataStore
     public List<AggregateRun> AggregateRuns { get; } = new();
     public List<VehicleModel> VehicleModels { get; } = new();
     public List<MarketSegmentStat> MarketSegmentStats { get; } = new();
+    public List<ModelLiquidityStat> ModelLiquidityStats { get; } = new();
     public List<Payment> Payments { get; } = new();
 
     /// <summary>شناسه‌ی کاربر نمونه‌ی لاگین‌شده (کامران رضایی، مشترک حرفه‌ای).</summary>

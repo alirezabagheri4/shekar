@@ -431,6 +431,31 @@ public sealed class EfMarketSegmentStatRepository : IMarketSegmentStatRepository
     }
 }
 
+public sealed class EfModelLiquidityStatRepository : IModelLiquidityStatRepository
+{
+    private readonly ShekarDbContext _db;
+    public EfModelLiquidityStatRepository(ShekarDbContext db) => _db = db;
+
+    public Task<ModelLiquidityStat?> GetByModelIdAsync(int vehicleModelId, CancellationToken ct = default) =>
+        _db.ModelLiquidityStats.FirstOrDefaultAsync(s => s.VehicleModelId == vehicleModelId, ct);
+
+    public async Task<IReadOnlyList<ModelLiquidityStat>> ListAsync(CancellationToken ct = default) =>
+        await _db.ModelLiquidityStats.AsNoTracking().ToListAsync(ct);
+
+    public async Task UpsertAsync(ModelLiquidityStat stat, CancellationToken ct = default)
+    {
+        if (stat.Id == 0)
+        {
+            _db.ModelLiquidityStats.Add(stat);
+        }
+        else
+        {
+            _db.ModelLiquidityStats.Update(stat);
+        }
+        await _db.SaveChangesAsync(ct);
+    }
+}
+
 public sealed class EfCrawlRunRepository : ICrawlRunRepository
 {
     private readonly ShekarDbContext _db;

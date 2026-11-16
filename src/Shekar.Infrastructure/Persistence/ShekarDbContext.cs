@@ -30,6 +30,7 @@ public class ShekarDbContext : DbContext
     public DbSet<VehicleModel> VehicleModels => Set<VehicleModel>();
     public DbSet<CarListing> CarListings => Set<CarListing>();
     public DbSet<MarketSegmentStat> MarketSegmentStats => Set<MarketSegmentStat>();
+    public DbSet<ModelLiquidityStat> ModelLiquidityStats => Set<ModelLiquidityStat>();
     public DbSet<CrawlRun> CrawlRuns => Set<CrawlRun>();
     public DbSet<AggregateRun> AggregateRuns => Set<AggregateRun>();
 

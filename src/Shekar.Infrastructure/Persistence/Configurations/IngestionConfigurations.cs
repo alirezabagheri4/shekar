@@ -120,6 +120,28 @@ public sealed class MarketSegmentStatConfiguration : IEntityTypeConfiguration<Ma
     }
 }
 
+public sealed class ModelLiquidityStatConfiguration : IEntityTypeConfiguration<ModelLiquidityStat>
+{
+    public void Configure(EntityTypeBuilder<ModelLiquidityStat> b)
+    {
+        b.ToTable("ModelLiquidityStats").HasComment("آمارِ غلتانِ نقدشوندگیِ هر مدل (DOM/نرخِ حذف)؛ داده‌ی گامِ اسکورینگ");
+        b.HasKey(x => x.Id);
+        b.Property(x => x.VehicleModelId).HasComment("مدل خودرو (کلیدِ یکتا)");
+        b.Property(x => x.WindowDays).HasComment("طول پنجره‌ی نمونه‌گیری (روز)");
+        b.Property(x => x.SampleCount).HasComment("کلِ آگهی‌های دیده‌شده‌ی مدل در پنجره (کوهورت)");
+        b.Property(x => x.RemovedCount).HasComment("تعداد حذف‌شده (پراکسیِ فروش؛ مبنای DOM)");
+        b.Property(x => x.ActiveCount).HasComment("تعداد هنوز فعال (لحاظِ سانسور)");
+        b.Property(x => x.MedianDomDays).HasComment("میانه‌ی روزهای‌روی‌بازار (کمتر=نقدشونده‌تر)");
+        b.Property(x => x.P25DomDays).HasComment("چارک اولِ روزهای‌روی‌بازار");
+        b.Property(x => x.RemovalRatePercent).HasComment("نرخِ حذف در پنجره (٪)");
+        b.Property(x => x.IsReliable).HasComment("آیا نقدشوندگیِ داده‌محور قابل‌اتکاست (حذفِ کافی)");
+        b.Property(x => x.ComputedAt).HasComment("زمان آخرین محاسبه");
+
+        b.HasOne<VehicleModel>().WithMany().HasForeignKey(x => x.VehicleModelId).OnDelete(DeleteBehavior.Cascade);
+        b.HasIndex(x => x.VehicleModelId).IsUnique();
+    }
+}
+
 public sealed class CrawlRunConfiguration : IEntityTypeConfiguration<CrawlRun>
 {
     public void Configure(EntityTypeBuilder<CrawlRun> b)

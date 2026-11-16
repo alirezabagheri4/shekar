@@ -52,6 +52,7 @@ public static class DependencyInjection
         services.AddScoped<IAggregateRunRepository, MockAggregateRunRepository>();
         services.AddScoped<IVehicleModelRepository, MockVehicleModelRepository>();
         services.AddScoped<IMarketSegmentStatRepository, MockMarketSegmentStatRepository>();
+        services.AddScoped<IModelLiquidityStatRepository, MockModelLiquidityStatRepository>();
         services.AddScoped<IPaymentRepository, MockPaymentRepository>();
         return services;
     }

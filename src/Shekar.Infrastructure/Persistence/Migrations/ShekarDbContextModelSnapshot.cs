@@ -833,6 +833,64 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.HasComment("آمار ساعتیِ هر سگمنت بازار؛ مرجع تشخیص زیرقیمت‌بودن");
                 });
 
+            modelBuilder.Entity("Shekar.Domain.Entities.ModelLiquidityStat", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"), 1L, 1);
+
+                    b.Property<int>("ActiveCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد هنوز فعال (لحاظِ سانسور)");
+
+                    b.Property<DateTimeOffset>("ComputedAt")
+                        .HasColumnType("datetimeoffset")
+                        .HasComment("زمان آخرین محاسبه");
+
+                    b.Property<bool>("IsReliable")
+                        .HasColumnType("bit")
+                        .HasComment("آیا نقدشوندگیِ داده‌محور قابل‌اتکاست (حذفِ کافی)");
+
+                    b.Property<int>("MedianDomDays")
+                        .HasColumnType("int")
+                        .HasComment("میانه‌ی روزهای‌روی‌بازار (کمتر=نقدشونده‌تر)");
+
+                    b.Property<int>("P25DomDays")
+                        .HasColumnType("int")
+                        .HasComment("چارک اولِ روزهای‌روی‌بازار");
+
+                    b.Property<int>("RemovalRatePercent")
+                        .HasColumnType("int")
+                        .HasComment("نرخِ حذف در پنجره (٪)");
+
+                    b.Property<int>("RemovedCount")
+                        .HasColumnType("int")
+                        .HasComment("تعداد حذف‌شده (پراکسیِ فروش؛ مبنای DOM)");
+
+                    b.Property<int>("SampleCount")
+                        .HasColumnType("int")
+                        .HasComment("کلِ آگهی‌های دیده‌شده‌ی مدل در پنجره (کوهورت)");
+
+                    b.Property<int>("VehicleModelId")
+                        .HasColumnType("int")
+                        .HasComment("مدل خودرو (کلیدِ یکتا)");
+
+                    b.Property<int>("WindowDays")
+                        .HasColumnType("int")
+                        .HasComment("طول پنجره‌ی نمونه‌گیری (روز)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VehicleModelId")
+                        .IsUnique();
+
+                    b.ToTable("ModelLiquidityStats", (string)null);
+
+                    b.HasComment("آمارِ غلتانِ نقدشوندگیِ هر مدل (DOM/نرخِ حذف)؛ داده‌ی گامِ اسکورینگ");
+                });
+
             modelBuilder.Entity("Shekar.Domain.Entities.OtpCode", b =>
                 {
                     b.Property<int>("Id")
@@ -1378,6 +1436,15 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("Shekar.Domain.Entities.MarketSegmentStat", b =>
+                {
+                    b.HasOne("Shekar.Domain.Entities.VehicleModel", null)
+                        .WithMany()
+                        .HasForeignKey("VehicleModelId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Shekar.Domain.Entities.ModelLiquidityStat", b =>
                 {
                     b.HasOne("Shekar.Domain.Entities.VehicleModel", null)
                         .WithMany()

@@ -453,6 +453,25 @@ CREATE UNIQUE INDEX UX_MSS_SegmentKey ON dbo.MarketSegmentStats(SegmentKey);
 CREATE INDEX IX_MSS_Model_Year_Mileage_Body ON dbo.MarketSegmentStats(VehicleModelId, ModelYear, MileageBucket, BodyCondition);
 GO
 
+/* ------------------- آمارِ غلتانِ نقدشوندگیِ هر مدل (DOM/نرخِ حذف)؛ داده‌ی گامِ اسکورینگ */
+CREATE TABLE dbo.ModelLiquidityStats (
+    Id                 INT            NOT NULL IDENTITY(1,1),       -- شناسه
+    VehicleModelId     INT            NOT NULL,                    -- مدل خودرو (کلیدِ یکتا)
+    WindowDays         INT            NOT NULL,                    -- طول پنجره‌ی نمونه‌گیری (روز)
+    SampleCount        INT            NOT NULL,                    -- کلِ آگهی‌های دیده‌شده‌ی مدل در پنجره (کوهورت)
+    RemovedCount       INT            NOT NULL,                    -- تعداد حذف‌شده (پراکسیِ فروش؛ مبنای DOM)
+    ActiveCount        INT            NOT NULL,                    -- تعداد هنوز فعال (لحاظِ سانسور)
+    MedianDomDays      INT            NOT NULL,                    -- میانه‌ی روزهای‌روی‌بازار (کمتر=نقدشونده‌تر)
+    P25DomDays         INT            NOT NULL,                    -- چارک اولِ روزهای‌روی‌بازار
+    RemovalRatePercent INT            NOT NULL,                    -- نرخِ حذف در پنجره (٪)
+    IsReliable         BIT            NOT NULL,                    -- آیا نقدشوندگیِ داده‌محور قابل‌اتکاست
+    ComputedAt         DATETIMEOFFSET NOT NULL,                    -- زمان آخرین محاسبه
+    CONSTRAINT PK_ModelLiquidityStats PRIMARY KEY (Id),
+    CONSTRAINT FK_MLS_VehicleModels FOREIGN KEY (VehicleModelId) REFERENCES dbo.VehicleModels(Id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX UX_MLS_VehicleModelId ON dbo.ModelLiquidityStats(VehicleModelId);
+GO
+
 /* ---------------------------------------------- لاگ پاس‌های کراول */
 CREATE TABLE dbo.CrawlRuns (
     Id           BIGINT         NOT NULL IDENTITY(1,1),           -- شناسه

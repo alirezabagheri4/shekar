@@ -107,6 +107,34 @@ public sealed class MockMarketSegmentStatRepository : IMarketSegmentStatReposito
     }
 }
 
+public sealed class MockModelLiquidityStatRepository : IModelLiquidityStatRepository
+{
+    private readonly MockDataStore _store;
+    public MockModelLiquidityStatRepository(MockDataStore store) => _store = store;
+
+    public Task<ModelLiquidityStat?> GetByModelIdAsync(int vehicleModelId, CancellationToken ct = default) =>
+        Task.FromResult(_store.ModelLiquidityStats.FirstOrDefault(s => s.VehicleModelId == vehicleModelId));
+
+    public Task<IReadOnlyList<ModelLiquidityStat>> ListAsync(CancellationToken ct = default) =>
+        Task.FromResult<IReadOnlyList<ModelLiquidityStat>>(_store.ModelLiquidityStats.ToList());
+
+    public Task UpsertAsync(ModelLiquidityStat stat, CancellationToken ct = default)
+    {
+        lock (_store.Gate)
+        {
+            ModelLiquidityStat? existing =
+                _store.ModelLiquidityStats.FirstOrDefault(s => s.VehicleModelId == stat.VehicleModelId);
+            if (existing is null)
+            {
+                stat.Id = _store.ModelLiquidityStats.Select(s => s.Id).DefaultIfEmpty(0).Max() + 1;
+                _store.ModelLiquidityStats.Add(stat);
+            }
+            // در صورت وجود، stat همان نمونه‌ی مرجع است و به‌روز شده.
+        }
+        return Task.CompletedTask;
+    }
+}
+
 public sealed class MockCrawlRunRepository : ICrawlRunRepository
 {
     private readonly MockDataStore _store;

@@ -53,6 +53,7 @@ public static class DependencyInjection
         services.AddScoped<IAggregateRunRepository, EfAggregateRunRepository>();
         services.AddScoped<IVehicleModelRepository, EfVehicleModelRepository>();
         services.AddScoped<IMarketSegmentStatRepository, EfMarketSegmentStatRepository>();
+        services.AddScoped<IModelLiquidityStatRepository, EfModelLiquidityStatRepository>();
         services.AddScoped<IPaymentRepository, EfPaymentRepository>();
 
         return services;
