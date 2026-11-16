@@ -23,8 +23,8 @@ public class ListingScoringTests
 
     private ListingScoringService Build() => new(
         new MockCarListingRepository(_store), new MockVehicleModelRepository(_store),
-        new MockMarketSegmentStatRepository(_store), new MockHuntRepository(_store, _clock),
-        new HuntScorer(), _clock);
+        new MockMarketSegmentStatRepository(_store), new MockModelLiquidityStatRepository(_store),
+        new MockHuntRepository(_store, _clock), new HuntScorer(), _clock);
 
     private CarListing AddListing(long price, int mileageKm = 10_000)
     {

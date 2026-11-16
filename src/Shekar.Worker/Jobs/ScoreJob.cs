@@ -43,7 +43,14 @@ public sealed class ScoreJob : IJob
             DispersionSpanPercent = _config.GetValue<int?>("Score:DispersionSpanPercent") ?? 45,
             DispersionFloor = _config.GetValue<double?>("Score:DispersionFloor") ?? 0.30,
             LevelPenaltyFactor = _config.GetValue<double?>("Score:LevelPenaltyFactor") ?? 0.85,
-            RequireReliableForGolden = _config.GetValue<bool?>("Score:RequireReliableForGolden") ?? true
+            RequireReliableForGolden = _config.GetValue<bool?>("Score:RequireReliableForGolden") ?? true,
+            FastDomDays = _config.GetValue<int?>("Score:FastDomDays") ?? 7,
+            SlowDomDays = _config.GetValue<int?>("Score:SlowDomDays") ?? 60,
+            RateSaturationPercent = _config.GetValue<int?>("Score:RateSaturationPercent") ?? 50,
+            LiquidityDomWeight = _config.GetValue<double?>("Score:LiquidityDomWeight") ?? 0.7,
+            LiquidityRateWeight = _config.GetValue<double?>("Score:LiquidityRateWeight") ?? 0.3,
+            LiquidityEvidenceFullAtRemovals = _config.GetValue<int?>("Score:LiquidityEvidenceFullAtRemovals") ?? 10,
+            HighLiquidityThreshold = _config.GetValue<int?>("Score:HighLiquidityThreshold") ?? 75
         };
 
         using IServiceScope scope = _scopeFactory.CreateScope();

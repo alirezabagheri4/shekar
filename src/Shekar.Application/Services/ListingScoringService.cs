@@ -25,17 +25,19 @@ public sealed class ListingScoringService : IListingScoringService
     private readonly ICarListingRepository _listings;
     private readonly IVehicleModelRepository _models;
     private readonly IMarketSegmentStatRepository _stats;
+    private readonly IModelLiquidityStatRepository _liquidity;
     private readonly IHuntRepository _hunts;
     private readonly IHuntScorer _scorer;
     private readonly IClock _clock;
 
     public ListingScoringService(
         ICarListingRepository listings, IVehicleModelRepository models, IMarketSegmentStatRepository stats,
-        IHuntRepository hunts, IHuntScorer scorer, IClock clock)
+        IModelLiquidityStatRepository liquidity, IHuntRepository hunts, IHuntScorer scorer, IClock clock)
     {
         _listings = listings;
         _models = models;
         _stats = stats;
+        _liquidity = liquidity;
         _hunts = hunts;
         _scorer = scorer;
         _clock = clock;
@@ -48,6 +50,9 @@ public sealed class ListingScoringService : IListingScoringService
 
         IReadOnlyList<CarListing> listings = await _listings.ListMatchedActiveSinceAsync(since, ct);
         Dictionary<int, VehicleModel> models = (await _models.ListActiveAsync(ct)).ToDictionary(m => m.Id);
+        // نقدشوندگیِ داده‌محورِ هر مدل (یک‌بار؛ در صورت نبودِ آمار، scorer به کاتالوگ برمی‌گردد).
+        Dictionary<int, ModelLiquidityStat> liquidityByModel =
+            (await _liquidity.ListAsync(ct)).ToDictionary(s => s.VehicleModelId);
 
         IReadOnlyList<Hunt> pipelineHunts = await _hunts.ListPipelineAsync(ct);
         Dictionary<long, Hunt> huntByListing = pipelineHunts
@@ -75,7 +80,8 @@ public sealed class ListingScoringService : IListingScoringService
             }
 
             evaluated++;
-            ScoreResult r = _scorer.Score(listing, segment, model, options);
+            liquidityByModel.TryGetValue(vmId, out ModelLiquidityStat? liquidity);
+            ScoreResult r = _scorer.Score(listing, segment, model, liquidity, options);
 
             listing.IsScored = true;
             await _listings.UpdateAsync(listing, ct);
