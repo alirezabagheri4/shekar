@@ -5,6 +5,17 @@ using Shekar.Domain.Entities;
 
 namespace Shekar.Application.Services;
 
+/// <summary>تنظیماتِ ورود.</summary>
+public sealed record AuthOptions
+{
+    /// <summary>
+    /// کدِ ورودِ «استاد» برای راه‌اندازی/تست: اگر تنظیم شود، <b>هر</b> شماره‌ی موبایلِ معتبر با همین کد
+    /// وارد می‌شود، بدونِ نیاز به دریافتِ پیامک و بدونِ انقضا. خالی/null = غیرفعال (مسیرِ عادیِ OTP).
+    /// ⚠️ در تولیدِ واقعی باید خالی شود؛ وگرنه هرکسی می‌تواند به‌جای هرکسی وارد شود.
+    /// </summary>
+    public string? MasterOtpCode { get; init; }
+}
+
 /// <summary>ورود با شماره موبایل + OTP پنج‌رقمی و تکمیل پروفایل در ورود اول.</summary>
 public sealed class AuthService : IAuthService
 {
@@ -16,6 +27,7 @@ public sealed class AuthService : IAuthService
     private readonly ISmsSender _sms;
     private readonly IClock _clock;
     private readonly IBlockedAdvertiserRepository _blocked;
+    private readonly AuthOptions _options;
 
     public AuthService(
         IOtpRepository otps,
@@ -23,7 +35,8 @@ public sealed class AuthService : IAuthService
         IOtpGenerator otpGenerator,
         ISmsSender sms,
         IClock clock,
-        IBlockedAdvertiserRepository blocked)
+        IBlockedAdvertiserRepository blocked,
+        AuthOptions options)
     {
         _otps = otps;
         _users = users;
@@ -31,6 +44,7 @@ public sealed class AuthService : IAuthService
         _sms = sms;
         _clock = clock;
         _blocked = blocked;
+        _options = options;
     }
 
     /// <summary>پیام محترمانه‌ی حساب مسدودشده با لینک پشتیبانی.</summary>
@@ -71,15 +85,22 @@ public sealed class AuthService : IAuthService
             throw new ForbiddenException(ErrorCodes.AccountBlocked, BlockedMessage);
         }
 
-        OtpCode? otp = await _otps.GetLatestAsync(request.Mobile, ct);
+        // کدِ استاد (راه‌اندازی/تست): هر شماره با این کد وارد می‌شود، بدونِ پیامک و بدونِ انقضا.
+        bool masterMatch = !string.IsNullOrEmpty(_options.MasterOtpCode)
+            && string.Equals(request.Code, _options.MasterOtpCode, StringComparison.Ordinal);
 
-        if (otp is null || otp.Consumed || otp.ExpiresAt <= now || otp.Code != request.Code)
+        if (!masterMatch)
         {
-            throw new AppValidationException("کد درست نیست یا منقضی شده.");
-        }
+            OtpCode? otp = await _otps.GetLatestAsync(request.Mobile, ct);
 
-        otp.Consumed = true;
-        await _otps.UpdateAsync(otp, ct);
+            if (otp is null || otp.Consumed || otp.ExpiresAt <= now || otp.Code != request.Code)
+            {
+                throw new AppValidationException("کد درست نیست یا منقضی شده.");
+            }
+
+            otp.Consumed = true;
+            await _otps.UpdateAsync(otp, ct);
+        }
 
         User? user = await _users.GetByMobileAsync(request.Mobile, ct);
         if (user is null)

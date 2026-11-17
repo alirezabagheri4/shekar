@@ -17,6 +17,8 @@ public static class DependencyInjection
         services.AddScoped<IBellService, BellService>();
         services.AddScoped<IPlanService, PlanService>();
         services.AddScoped<IAuthService, AuthService>();
+        // پیش‌فرضِ تنظیماتِ ورود (کدِ استاد غیرفعال)؛ میزبان می‌تواند با ثبتِ دوباره از config بازنویسی کند.
+        services.AddSingleton(new AuthOptions());
         services.AddScoped<ISupportService, SupportService>();
         services.AddScoped<IPaymentService, PaymentService>();
 

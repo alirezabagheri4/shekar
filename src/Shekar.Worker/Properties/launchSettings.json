@@ -7,6 +7,14 @@
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }
+    },
+    "Shekar.Worker (Console)": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "commandLineArgs": "console",
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development"
+      }
     }
   }
 }

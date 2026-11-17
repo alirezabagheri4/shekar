@@ -1,10 +1,19 @@
+using Microsoft.Extensions.DependencyInjection;
 using Quartz;
 using Shekar.Application;
 using Shekar.Infrastructure;
 using Shekar.Mock;
+using Shekar.Worker;
 using Shekar.Worker.Jobs;
 
 var builder = Host.CreateApplicationBuilder(args);
+
+// حالتِ «کنسولِ دستی» (توسعه/دیباگ روی لوکال): با آرگومانِ `console`/`--console` یا تنظیمِ `Mode=Console`.
+// در این حالت به‌جای زمان‌بندِ خودکار، منوی انتخابِ جاب نشان داده می‌شود.
+bool consoleMode =
+    args.Any(a => a.Equals("console", StringComparison.OrdinalIgnoreCase)
+               || a.Equals("--console", StringComparison.OrdinalIgnoreCase))
+    || string.Equals(builder.Configuration["Mode"], "Console", StringComparison.OrdinalIgnoreCase);
 
 // فقط سرویس‌های پایپ‌لاین (بدون سرویس‌های کاربرپسندِ وابسته به ICurrentUser).
 builder.Services.AddPipelineServices();
@@ -31,6 +40,19 @@ if (string.Equals(crawlProvider, "Divar", StringComparison.OrdinalIgnoreCase))
 else
 {
     builder.Services.AddMockCrawlProvider();
+}
+
+if (consoleMode)
+{
+    // جاب‌ها را به‌عنوان سرویسِ معمولی در دسترس می‌گذاریم تا کنسول آن‌ها را بسازد و RunOnceAsync بزند.
+    builder.Services.AddTransient<CrawlJob>();
+    builder.Services.AddTransient<AggregateJob>();
+    builder.Services.AddTransient<ScoreJob>();
+
+    IHost consoleHost = builder.Build();
+    await ConsoleRunner.RunAsync(consoleHost.Services, consoleHost.Services
+        .GetRequiredService<IHostApplicationLifetime>().ApplicationStopping);
+    return;
 }
 
 // زمان‌بندی با Quartz — کراول هر N دقیقه، اگریگیشن هر M دقیقه (پیش‌فرض ساعتی).

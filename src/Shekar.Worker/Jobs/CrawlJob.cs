@@ -24,9 +24,11 @@ public sealed class CrawlJob : IJob
         _logger = logger;
     }
 
-    public async Task Execute(IJobExecutionContext context)
+    public Task Execute(IJobExecutionContext context) => RunOnceAsync(context.CancellationToken);
+
+    /// <summary>یک پاسِ کاملِ کراول؛ هم از زمان‌بندِ Quartz و هم از کنسولِ دستی فراخوانی می‌شود.</summary>
+    public async Task RunOnceAsync(CancellationToken ct)
     {
-        CancellationToken ct = context.CancellationToken;
         int maxAgeHours = _config.GetValue<int?>("Crawl:MaxAgeHours") ?? 24;
         int staleAfterHours = _config.GetValue<int?>("Crawl:StaleAfterHours") ?? 72;
 

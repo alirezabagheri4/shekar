@@ -22,9 +22,11 @@ public sealed class ScoreJob : IJob
         _logger = logger;
     }
 
-    public async Task Execute(IJobExecutionContext context)
+    public Task Execute(IJobExecutionContext context) => RunOnceAsync(context.CancellationToken);
+
+    /// <summary>یک پاسِ کاملِ اسکورینگ؛ از زمان‌بند و کنسولِ دستی فراخوانی می‌شود.</summary>
+    public async Task RunOnceAsync(CancellationToken ct)
     {
-        CancellationToken ct = context.CancellationToken;
         int windowHours = _config.GetValue<int?>("Score:WindowHours") ?? 48;
 
         var options = new ScoringOptions

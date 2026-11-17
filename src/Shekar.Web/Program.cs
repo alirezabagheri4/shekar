@@ -22,6 +22,12 @@ builder.Services.Configure<RazorViewEngineOptions>(options =>
 // لایه‌های برنامه. انتخاب منبع داده با تنظیم «Persistence»: «Mock» (پیش‌فرض) یا «SqlServer».
 builder.Services.AddApplicationServices();
 
+// کدِ ورودِ «استاد» از config (خالی = غیرفعال). پس از AddApplicationServices ثبت می‌شود تا پیش‌فرض را بازنویسی کند.
+builder.Services.AddSingleton(new Shekar.Application.Services.AuthOptions
+{
+    MasterOtpCode = builder.Configuration["Auth:MasterOtpCode"]
+});
+
 string persistence = builder.Configuration["Persistence"] ?? "Mock";
 if (string.Equals(persistence, "SqlServer", StringComparison.OrdinalIgnoreCase))
 {

@@ -25,9 +25,11 @@ public sealed class AggregateJob : IJob
         _logger = logger;
     }
 
-    public async Task Execute(IJobExecutionContext context)
+    public Task Execute(IJobExecutionContext context) => RunOnceAsync(context.CancellationToken);
+
+    /// <summary>یک پاسِ کاملِ نرمال‌سازی + اگریگیشن؛ از زمان‌بند و کنسولِ دستی فراخوانی می‌شود.</summary>
+    public async Task RunOnceAsync(CancellationToken ct)
     {
-        CancellationToken ct = context.CancellationToken;
         int windowDays = _config.GetValue<int?>("Aggregate:WindowDays") ?? 30;
         int normalizeBatch = _config.GetValue<int?>("Aggregate:NormalizeBatch") ?? 5000;
 
