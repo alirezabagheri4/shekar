@@ -28,4 +28,9 @@
     <InternalsVisibleTo Include="Shekar.Infrastructure.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- داده‌ی کاتالوگ خودروی دیوار؛ توسطِ مایگریشنِ SeedDivarVehicleModels به‌صورتِ embedded خوانده و اجرا می‌شود. -->
+    <EmbeddedResource Include="Persistence\Seed\DivarVehicleModels.sql" />
+  </ItemGroup>
+
 </Project>
