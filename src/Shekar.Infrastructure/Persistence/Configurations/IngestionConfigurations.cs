@@ -35,6 +35,7 @@ public sealed class VehicleModelConfiguration : IEntityTypeConfiguration<Vehicle
         b.HasIndex(x => new { x.Brand, x.Model, x.Trim });
         // نگاشتِ قطعی از شناسه‌ی منبع؛ یکتا میان مقادیر غیرتهی.
         b.HasIndex(x => x.DivarKey).IsUnique().HasFilter("[DivarKey] IS NOT NULL");
+        b.HasData(SeedData.VehicleModels());
     }
 }
 

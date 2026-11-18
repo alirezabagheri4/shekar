@@ -446,6 +446,40 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.ToTable("Cities", (string)null);
 
                     b.HasComment("شهرهای تحت پوشش سرویس");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Capacity = 100,
+                            IsActive = true,
+                            Name = "تهران",
+                            Slug = "tehran"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Capacity = 100,
+                            IsActive = false,
+                            Name = "کرج",
+                            Slug = "karaj"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Capacity = 100,
+                            IsActive = false,
+                            Name = "اصفهان",
+                            Slug = "isfahan"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Capacity = 100,
+                            IsActive = false,
+                            Name = "مشهد",
+                            Slug = "mashhad"
+                        });
                 });
 
             modelBuilder.Entity("Shekar.Domain.Entities.CrawlRun", b =>
@@ -1053,6 +1087,22 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.ToTable("Plans", (string)null);
 
                     b.HasComment("پلن‌های اشتراک (فقط پرداخت ماهانه — R2)");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            MonthlyPriceToman = 990000L,
+                            Name = "شکارچی",
+                            Type = (byte)1
+                        },
+                        new
+                        {
+                            Id = 2,
+                            MonthlyPriceToman = 1499000L,
+                            Name = "شکارچی حرفه‌ای",
+                            Type = (byte)2
+                        });
                 });
 
             modelBuilder.Entity("Shekar.Domain.Entities.PlanLimit", b =>
@@ -1102,6 +1152,31 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.ToTable("PlanLimits", (string)null);
 
                     b.HasComment("محدودیت‌ها و امکانات هر پلن (داده‌محور کردن قوانین پلن)");
+
+                    b.HasData(
+                        new
+                        {
+                            PlanId = 1,
+                            AllowBellAlerts = false,
+                            BellAlertDurationHours = 24,
+                            MaxActiveBells = 0,
+                            PrioritySupport = false,
+                            RealtimeHunts = true,
+                            TrialAllowed = true,
+                            TrialHours = 24,
+                            UnlimitedAppraisals = true
+                        },
+                        new
+                        {
+                            PlanId = 2,
+                            AllowBellAlerts = true,
+                            BellAlertDurationHours = 24,
+                            PrioritySupport = true,
+                            RealtimeHunts = true,
+                            TrialAllowed = false,
+                            TrialHours = 24,
+                            UnlimitedAppraisals = true
+                        });
                 });
 
             modelBuilder.Entity("Shekar.Domain.Entities.Subscription", b =>
@@ -1180,6 +1255,112 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.ToTable("SystemSettings", (string)null);
 
                     b.HasComment("محدودیت‌ها و تنظیمات سراسری کسب‌وکار (کلید/مقدار، قابل تغییر بدون انتشار)");
+
+                    b.HasData(
+                        new
+                        {
+                            Key = "CityCapacity",
+                            Description = "R1 — ظرفیت پیش‌فرض اشتراک فعال هر شهر",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "100",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "FreeAppraisalsPerMonthGuest",
+                            Description = "R5 — سهمیه‌ی کارشناسی رایگان ماهانه برای کاربر بدون اشتراک",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "3",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "TrialHours",
+                            Description = "R3 — مدت اشتراک آزمایشی رایگان (ساعت)",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "24",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "BellAlertHours",
+                            Description = "R6 — مدت فعال‌بودن زنگوله پیش از خاموشی خودکار (ساعت)",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "24",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "GoldenScoreThreshold",
+                            Description = "R8 — حداقل امتیاز برای «فرصت طلایی»",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "85",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "TransactionCostFloorToman",
+                            Description = "R9 — کف هزینه‌ی نقل‌وانتقال و فروش (تومان)",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "15000000",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "TransactionCostRate",
+                            Description = "R9 — نرخ هزینه‌ی نقل‌وانتقال نسبت به قیمت آگهی",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "0.02",
+                            ValueType = "decimal"
+                        },
+                        new
+                        {
+                            Key = "SupportStartHour",
+                            Description = "R12 — ساعت شروع پشتیبانی (Asia/Tehran)",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "9",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "SupportEndHour",
+                            Description = "R12 — ساعت پایان پشتیبانی (Asia/Tehran)",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "18",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "MaxAdsPerMonthBeforeReview",
+                            Description = "آستانه‌ی تعداد آگهی ماهانه برای بررسی دلال/اسپم",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "20",
+                            ValueType = "int"
+                        },
+                        new
+                        {
+                            Key = "CardTransfer.CardNumber",
+                            Description = "شماره کارت مقصد پرداخت کارت‌به‌کارت",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "6219861082608372",
+                            ValueType = "string"
+                        },
+                        new
+                        {
+                            Key = "CardTransfer.HolderName",
+                            Description = "نام صاحب کارت مقصد",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "علیرضا باقری",
+                            ValueType = "string"
+                        },
+                        new
+                        {
+                            Key = "CardTransfer.BankName",
+                            Description = "نام بانک کارت مقصد",
+                            UpdatedAt = new DateTimeOffset(new DateTime(2026, 11, 17, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            Value = "بانک سامان",
+                            ValueType = "string"
+                        });
                 });
 
             modelBuilder.Entity("Shekar.Domain.Entities.User", b =>
@@ -1302,6 +1483,196 @@ namespace Shekar.Infrastructure.Persistence.Migrations
                     b.ToTable("VehicleModels", (string)null);
 
                     b.HasComment("کاتالوگ خودرو + نقدشوندگیِ دستی هر مدل؛ مرجع نرمال‌سازی و سگمنت‌بندی");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Aliases = "[\"207\",\"\\u067E\\u0698\\u0648 207\",\"peugeot 207\"]",
+                            BodyType = "هاچ‌بک",
+                            Brand = "پژو",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 90,
+                            Model = "۲۰۷",
+                            Trim = "دستی"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Aliases = "[\"206\",\"\\u067E\\u0698\\u0648 206\"]",
+                            BodyType = "هاچ‌بک",
+                            Brand = "پژو",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 85,
+                            Model = "۲۰۶",
+                            Trim = "تیپ ۵"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Aliases = "[\"pars\",\"\\u067E\\u0698\\u0648 \\u067E\\u0627\\u0631\\u0633\"]",
+                            BodyType = "سدان",
+                            Brand = "پژو",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 80,
+                            Model = "پارس"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Aliases = "[\"pride\",\"\\u067E\\u0631\\u0627\\u06CC\\u062F 111\"]",
+                            BodyType = "هاچ‌بک",
+                            Brand = "سایپا",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 88,
+                            Model = "پراید",
+                            Trim = "۱۱۱"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Aliases = "[\"tiba\",\"\\u062A\\u06CC\\u0628\\u0627\"]",
+                            BodyType = "سدان",
+                            Brand = "سایپا",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 78,
+                            Model = "تیبا"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Aliases = "[\"quick\",\"\\u06A9\\u0648\\u06CC\\u06CC\\u06A9 \\u06A9\\u0631\\u0627\\u0633\"]",
+                            BodyType = "هاچ‌بک",
+                            Brand = "سایپا",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 82,
+                            Model = "کوییک",
+                            Trim = "اتوماتیک"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Aliases = "[\"dena\",\"\\u062F\\u0646\\u0627 \\u067E\\u0644\\u0627\\u0633\"]",
+                            BodyType = "سدان",
+                            Brand = "ایران‌خودرو",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 84,
+                            Model = "دنا",
+                            Trim = "پلاس توربو"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Aliases = "[\"tara\",\"\\u062A\\u0627\\u0631\\u0627\"]",
+                            BodyType = "سدان",
+                            Brand = "ایران‌خودرو",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 80,
+                            Model = "تارا",
+                            Trim = "اتوماتیک"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Aliases = "[\"samand\",\"\\u0633\\u0645\\u0646\\u062F \\u0633\\u0648\\u0631\\u0646\"]",
+                            BodyType = "سدان",
+                            Brand = "ایران‌خودرو",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 76,
+                            Model = "سمند",
+                            Trim = "سورن پلاس"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Aliases = "[\"mvm x55\",\"\\u0627\\u0645 \\u0648\\u06CC \\u0627\\u0645 \\u0627\\u06CC\\u06A9\\u063355\"]",
+                            BodyType = "شاسی‌بلند",
+                            Brand = "ام‌وی‌ام",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 70,
+                            Model = "X55",
+                            Trim = "پرو"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Aliases = "[\"changan\",\"univ\",\"\\u06CC\\u0648\\u0646\\u06CC \\u0648\\u06CC\"]",
+                            BodyType = "شاسی‌بلند",
+                            Brand = "چانگان",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 68,
+                            Model = "یونی‌وی"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Aliases = "[\"cerato\",\"\\u06A9\\u06CC\\u0627 \\u0633\\u0631\\u0627\\u062A\\u0648\"]",
+                            BodyType = "سدان",
+                            Brand = "کیا",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 66,
+                            Model = "سراتو",
+                            Trim = "۲۰۰۰"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Aliases = "[\"sonata\",\"\\u0633\\u0648\\u0646\\u0627\\u062A\\u0627\"]",
+                            BodyType = "سدان",
+                            Brand = "هیوندای",
+                            ColorSensitive = false,
+                            IsActive = true,
+                            LiquidityScore = 58,
+                            Model = "سوناتا",
+                            Trim = "LF"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Aliases = "[\"bmw 730\",\"730li\"]",
+                            BodyType = "سدان",
+                            Brand = "بی‌ام‌و",
+                            ColorSensitive = true,
+                            IsActive = true,
+                            LiquidityScore = 45,
+                            Model = "۷۳۰Li",
+                            Trim = "ام‌پکیج"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Aliases = "[\"benz e250\",\"e250\"]",
+                            BodyType = "سدان",
+                            Brand = "بنز",
+                            ColorSensitive = true,
+                            IsActive = true,
+                            LiquidityScore = 42,
+                            Model = "E250"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Aliases = "[\"prado\",\"\\u0644\\u0646\\u062F\\u06A9\\u0631\\u0648\\u0632\\u0631\"]",
+                            BodyType = "شاسی‌بلند",
+                            Brand = "تویوتا",
+                            ColorSensitive = true,
+                            IsActive = true,
+                            LiquidityScore = 55,
+                            Model = "لندکروزر",
+                            Trim = "پرادو"
+                        });
                 });
 
             modelBuilder.Entity("Shekar.Domain.Entities.WaitlistEntry", b =>

@@ -78,5 +78,6 @@ public sealed class SystemSettingConfiguration : IEntityTypeConfiguration<System
         b.Property(x => x.ValueType).HasMaxLength(20).HasComment("نوع مقدار: int|decimal|bool|time|string");
         b.Property(x => x.Description).HasMaxLength(300).HasComment("توضیح کاربردی تنظیم");
         b.Property(x => x.UpdatedAt).HasComment("زمان آخرین تغییر");
+        b.HasData(SeedData.SystemSettings());
     }
 }

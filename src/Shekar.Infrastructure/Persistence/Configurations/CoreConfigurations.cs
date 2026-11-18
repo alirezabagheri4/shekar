@@ -15,6 +15,7 @@ public sealed class CityConfiguration : IEntityTypeConfiguration<City>
         b.Property(x => x.IsActive).HasComment("آیا شهر فعال است یا «به‌زودی»");
         b.Property(x => x.Capacity).HasComment("ظرفیت اشتراک فعال شهر (پیش‌فرض ۱۰۰ طبق قانون R1)");
         b.HasIndex(x => x.Slug).IsUnique();
+        b.HasData(SeedData.Cities());
     }
 }
 
@@ -30,6 +31,7 @@ public sealed class PlanConfiguration : IEntityTypeConfiguration<Plan>
         b.Ignore(x => x.Features);      // ویژگی‌های نمایشی؛ در PlanFeatures نگهداری می‌شود (اختیاری) — فعلاً ثابت در کد
         b.Ignore(x => x.HasBellAlerts); // مشتق از PlanLimit.AllowBellAlerts
         b.HasIndex(x => x.Type).IsUnique();
+        b.HasData(SeedData.Plans());
     }
 }
 
@@ -50,6 +52,7 @@ public sealed class PlanLimitConfiguration : IEntityTypeConfiguration<PlanLimit>
         b.Property(x => x.RealtimeHunts).HasComment("نمایش شکارها در لحظه");
         b.Property(x => x.PrioritySupport).HasComment("پشتیبانی اولویت‌دار");
         b.HasOne(x => x.Plan).WithOne().HasForeignKey<PlanLimit>(x => x.PlanId).OnDelete(DeleteBehavior.Cascade);
+        b.HasData(SeedData.PlanLimits());
     }
 }
 
